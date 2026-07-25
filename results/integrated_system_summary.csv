@@ -1,0 +1,17 @@
+system_metric,value
+synthetic_records,3000
+data_dictionary_fields,22
+model_features,16
+selected_model,logistic_regression
+test_records,750
+selected_model_roc_auc,0.6852081713226057
+selected_model_average_precision,0.5790840021213592
+fairness_governance_status,REVIEW_REQUIRED
+fairness_comparisons_requiring_review,7
+small_audit_groups_excluded,2
+controlled_drafts_generated,12
+controlled_drafts_passing_safety_validation,12
+demographics_used_as_model_features,False
+demographics_in_generated_materials,False
+human_review_required,True
+autonomous_contact_allowed,False

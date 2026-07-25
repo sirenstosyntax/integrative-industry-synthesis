@@ -1,0 +1,23 @@
+﻿field_name,data_type,allowed_values,description,modeling_role
+synthetic_patient_id,string,FF-00001 format,Artificial record identifier,identifier_only
+age_group,category,18-34|35-49|50-64|65-79|80+,Coarse synthetic age category,audit_only
+sex,category,Female|Male|Another_or_unknown,Synthetic demographic attribute,audit_only
+race_ethnicity,category,White|Black|Hispanic|Asian|Native_American|Multiracial_or_other,Synthetic demographic attribute used only for fairness evaluation,audit_only
+housing_instability,binary,0|1,Indicates a simulated housing-related need,model_feature
+transportation_barrier,binary,0|1,Indicates simulated difficulty reaching routine services,model_feature
+food_insecurity,binary,0|1,Indicates a simulated food-access need,model_feature
+medication_access_barrier,binary,0|1,Indicates simulated difficulty obtaining prescribed medication,model_feature
+behavioral_health_support_need,binary,0|1,Indicates a simulated non-diagnostic support need,model_feature
+substance_use_support_need,binary,0|1,Indicates a simulated support-navigation need,model_feature
+primary_care_connected,binary,0|1,Indicates connection to a primary-care provider,model_feature
+chronic_condition_count,integer,0-8,Count of simulated chronic-condition categories without diagnoses,model_feature
+ems_calls_12m,integer,0 or greater,Simulated EMS calls during the preceding 12 months,model_feature
+ed_visits_12m,integer,0 or greater,Simulated emergency-department visits during the preceding 12 months,model_feature
+hospital_admissions_12m,integer,0 or greater,Simulated hospital admissions during the preceding 12 months,model_feature
+missed_appointments_12m,integer,0 or greater,Simulated missed outpatient appointments during the preceding 12 months,model_feature
+days_since_last_911_call,integer,0-365,Days since the most recent simulated 911 call,model_feature
+prior_outreach_attempts,integer,0-10,Number of simulated prior outreach attempts,model_feature
+prior_outreach_engaged,binary,0|1,Indicates engagement with a previous simulated outreach attempt,model_feature
+social_need_count,integer,0-6,Derived count of simulated social and support needs,derived_model_feature
+outreach_response_90d,binary,0|1,Synthetic historical outcome indicating a beneficial response within 90 days,target
+data_source,string,synthetic,Confirms that the record is entirely artificial,metadata_only

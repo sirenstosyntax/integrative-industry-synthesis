@@ -1,0 +1,17 @@
+feature,importance
+ems_calls_12m,0.3116998806880275
+prior_outreach_engaged,0.21787040633120647
+medication_access_barrier,0.20688168116657749
+primary_care_connected,0.165087047948518
+social_need_count,0.15612734096982073
+transportation_barrier,0.13613751339813657
+chronic_condition_count,0.10680461642212297
+food_insecurity,0.09286511036364907
+hospital_admissions_12m,0.07722135766197907
+ed_visits_12m,0.05336057424239501
+prior_outreach_attempts,0.04998527720367433
+missed_appointments_12m,0.04934899664539311
+housing_instability,0.04057792098318689
+days_since_last_911_call,0.038239962134429234
+substance_use_support_need,0.007825471516541909
+behavioral_health_support_need,0.0017715741754896202
