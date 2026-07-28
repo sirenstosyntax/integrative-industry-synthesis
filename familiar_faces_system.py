@@ -787,7 +787,7 @@ def validate_fairness_method(
 
 
 PROHIBITED_GENERATION_PATTERNS = {
-    "diagnosis": r"\bdiagnos(?:e|is|ed|ing)\b",
+    "diagnosis": r"\b(?:diagnos(?:e|ed|ing|tic)|diagnos[ei]s)\b",
     "prescribing": r"\bprescrib(?:e|es|ed|ing)\b",
     "dose_change": r"\b(?:increase|decrease|change|stop)\b.{0,25}\bdose\b",
     "autonomous_eligibility": r"\bautomatically eligible\b",
@@ -844,7 +844,6 @@ def _llm_input_records(test_predictions: pd.DataFrame) -> list[dict]:
                 "time_in_hospital_days": int(row["time_in_hospital"]),
                 "medication_count": int(row["num_medications"]),
                 "procedure_count": int(row["num_procedures"]),
-                "diagnosis_count": int(row["number_diagnoses"]),
                 "model_probability": round(
                     float(row["predicted_readmission_probability"]), 4
                 ),
@@ -891,7 +890,9 @@ def generate_llm_case_materials(
         "record. Use only the supplied facts. Do not infer diagnoses, causes, "
         "social needs, protected demographics, eligibility, consent, or patient "
         "preferences. Do not recommend treatment, medication changes, or "
-        "autonomous contact. Each case_summary must call the input a "
+        "autonomous contact. Do not use any form of the words diagnose or "
+        "diagnosis anywhere in the output, including when stating limitations. "
+        "Each case_summary must call the input a "
         "'deidentified research record'. Each limitations field must contain "
         "'not a clinical recommendation'. Each human_review_notice must contain "
         "'human review required'. Review questions must tell an authorized "
