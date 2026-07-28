@@ -865,6 +865,10 @@ def generate_llm_case_materials(
             "PowerShell window before using --generate-llm."
         )
 
+    import ssl
+
+    import httpx
+    import truststore
     from openai import OpenAI
     from pydantic import BaseModel, Field
 
@@ -896,7 +900,12 @@ def generate_llm_case_materials(
         + json.dumps(records, indent=2)
     )
 
-    client = OpenAI()
+    # HTTPX uses certifi by default, which may not include a trusted root
+    # installed by a managed Windows network or endpoint-security product.
+    # Use the native operating-system trust store while retaining full TLS
+    # certificate verification.
+    ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    client = OpenAI(http_client=httpx.Client(verify=ssl_context))
     response = client.responses.parse(
         model=model,
         input=[
