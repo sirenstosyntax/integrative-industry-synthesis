@@ -52,14 +52,15 @@ Keeping one encounter per patient prevents repeat-patient leakage across the tra
 
 ## Machine Learning
 
-Sixteen nonprotected encounter and prior-utilization fields are used as predictors. Age, gender, race, patient number, and encounter number are excluded.
+Twenty nonprotected encounter and prior-utilization fields are used as predictors. Four are transparent engineered features: total prior utilization and indicators for any prior emergency, inpatient, or outpatient use. Age, gender, race, patient number, and encounter number are excluded.
 
-The workflow compares:
+The workflow compares and tunes:
 
-- Class-weighted logistic regression
-- Class-weighted random forest
+- Logistic regression
+- Random forest
+- Histogram gradient boosting
 
-Both models use the same patient-independent held-out partition. Average precision is the primary selection metric because the positive outcome is uncommon. ROC AUC, accuracy, precision, recall, and F1 are also reported.
+The final 25% test partition is held untouched during model selection. Hyperparameters are selected using four-fold, patient-independent cross-validation within the remaining training data. Mean cross-validated average precision is the primary selection metric because the positive outcome is uncommon, with ROC AUC as the secondary criterion. Only the selected configuration is evaluated on the final test set. ROC AUC and average precision receive 1,000-sample bootstrap 95% confidence intervals; accuracy, precision, recall, and F1 are also reported descriptively at the fixed 0.50 threshold.
 
 Current analytic results:
 
@@ -69,14 +70,14 @@ Current analytic results:
 | Training records | 52,492 |
 | Test records | 17,498 |
 | Test positive rate | 8.98% |
-| Selected model | Logistic regression |
-| ROC AUC | 0.644 |
-| Average precision | 0.165 |
-| Precision at 0.50 threshold | 0.141 |
-| Recall at 0.50 threshold | 0.515 |
+| Selected model | Random forest |
+| ROC AUC (95% bootstrap CI) | 0.644 (0.629–0.659) |
+| Average precision (95% bootstrap CI) | 0.166 (0.153–0.181) |
+| Precision at 0.50 threshold | 0.144 |
+| Recall at 0.50 threshold | 0.502 |
 | Patient overlap | 0 |
 
-These results support only a limited, human-reviewed research demonstration.
+Random forest and histogram gradient boosting were effectively tied in cross-validated average precision (0.168727 versus 0.168709); the deterministic selection rule chose random forest. The prior workflow produced ROC AUC 0.644 and average precision 0.164 but reused the test set for model selection. The revised score improvement is small; its value is the more credible evaluation design, not evidence of materially stronger discrimination. These results support only a limited, human-reviewed research demonstration.
 
 ## Validated Fairness Governance
 
@@ -135,6 +136,8 @@ No API key is stored in the notebook, source code, output files, or repository.
 - `create_integrative_report.py` — synthesis PDF builder
 - `figures/` — architecture and analytical figures
 - `results/` — model, fairness, simulation, generation, and summary artifacts
+  - `model_selection_cv_results.csv` — all training-only tuning results
+  - `selected_model_bootstrap_intervals.csv` — final-test uncertainty intervals
 
 ## Environment Setup
 

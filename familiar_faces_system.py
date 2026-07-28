@@ -22,7 +22,10 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import (
+    HistGradientBoostingClassifier,
+    RandomForestClassifier,
+)
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -33,9 +36,9 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.model_selection import GridSearchCV, StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 
 
 SEED = 20260728
@@ -58,6 +61,16 @@ NUMERIC_FEATURES = [
     "number_emergency",
     "number_inpatient",
     "number_diagnoses",
+    "total_prior_utilization",
+    "any_prior_emergency_use",
+    "any_prior_inpatient_use",
+    "any_prior_outpatient_use",
+]
+ENGINEERED_FEATURES = [
+    "total_prior_utilization",
+    "any_prior_emergency_use",
+    "any_prior_inpatient_use",
+    "any_prior_outpatient_use",
 ]
 
 CATEGORICAL_FEATURES = [
@@ -101,6 +114,8 @@ AUDIT_SIMULATIONS = 200
 INJECTED_DIFFERENCE = 0.15
 LLM_CASE_COUNT = 5
 DEFAULT_LLM_MODEL = "gpt-5.6"
+MODEL_SELECTION_FOLDS = 4
+BOOTSTRAP_SAMPLES = 1000
 
 
 def prepare_output_directories() -> None:
@@ -146,7 +161,7 @@ def load_and_prepare_data() -> tuple[pd.DataFrame, pd.DataFrame]:
         PATIENT_ID,
         ENCOUNTER_ID,
         "readmitted",
-        *MODEL_FEATURES,
+        *(set(MODEL_FEATURES) - set(ENGINEERED_FEATURES)),
         *FAIRNESS_AUDIT_FIELDS,
     }
     missing = sorted(required - set(raw.columns))
@@ -160,6 +175,20 @@ def load_and_prepare_data() -> tuple[pd.DataFrame, pd.DataFrame]:
         PATIENT_ID, keep="first"
     )
     data[TARGET] = (data["readmitted"] == "<30").astype(int)
+    data["total_prior_utilization"] = (
+        data["number_outpatient"]
+        + data["number_emergency"]
+        + data["number_inpatient"]
+    )
+    data["any_prior_emergency_use"] = (
+        data["number_emergency"] > 0
+    ).astype(int)
+    data["any_prior_inpatient_use"] = (
+        data["number_inpatient"] > 0
+    ).astype(int)
+    data["any_prior_outpatient_use"] = (
+        data["number_outpatient"] > 0
+    ).astype(int)
     data["race"] = data["race"].map(_normalize_race)
     data["gender"] = data["gender"].replace(
         {"Unknown/Invalid": "Unknown/Not recorded"}
@@ -282,7 +311,25 @@ def run_statistical_analysis(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFra
     return summary, band_results
 
 
-def _make_preprocessor() -> ColumnTransformer:
+def _make_preprocessor(
+    categorical_encoding: str = "onehot",
+) -> ColumnTransformer:
+    if categorical_encoding == "onehot":
+        categorical_encoder = OneHotEncoder(
+            handle_unknown="ignore",
+            sparse_output=True,
+        )
+    elif categorical_encoding == "ordinal":
+        categorical_encoder = OrdinalEncoder(
+            handle_unknown="use_encoded_value",
+            unknown_value=-1,
+            encoded_missing_value=-1,
+        )
+    else:
+        raise ValueError(
+            f"Unsupported categorical encoding: {categorical_encoding}"
+        )
+
     return ColumnTransformer(
         [
             (
@@ -307,10 +354,7 @@ def _make_preprocessor() -> ColumnTransformer:
                         ),
                         (
                             "onehot",
-                            OneHotEncoder(
-                                handle_unknown="ignore",
-                                sparse_output=True,
-                            ),
+                            categorical_encoder,
                         ),
                     ]
                 ),
@@ -320,10 +364,73 @@ def _make_preprocessor() -> ColumnTransformer:
     )
 
 
+def _bootstrap_metric_intervals(
+    outcomes: np.ndarray,
+    probabilities: np.ndarray,
+) -> pd.DataFrame:
+    """Estimate percentile confidence intervals on the untouched test set."""
+    rng = np.random.default_rng(SEED)
+    indices = np.arange(len(outcomes))
+    roc_values: list[float] = []
+    ap_values: list[float] = []
+    for _ in range(BOOTSTRAP_SAMPLES):
+        sample = rng.choice(indices, size=len(indices), replace=True)
+        sampled_outcomes = outcomes[sample]
+        if np.unique(sampled_outcomes).size < 2:
+            continue
+        sampled_probabilities = probabilities[sample]
+        roc_values.append(
+            roc_auc_score(sampled_outcomes, sampled_probabilities)
+        )
+        ap_values.append(
+            average_precision_score(
+                sampled_outcomes, sampled_probabilities
+            )
+        )
+
+    rows = []
+    for metric, point, values in [
+        (
+            "roc_auc",
+            roc_auc_score(outcomes, probabilities),
+            roc_values,
+        ),
+        (
+            "average_precision",
+            average_precision_score(outcomes, probabilities),
+            ap_values,
+        ),
+    ]:
+        lower, upper = np.percentile(values, [2.5, 97.5])
+        rows.append(
+            {
+                "metric": metric,
+                "point_estimate": point,
+                "confidence_level": 0.95,
+                "lower_bound": lower,
+                "upper_bound": upper,
+                "bootstrap_samples": len(values),
+            }
+        )
+    intervals = pd.DataFrame(rows)
+    intervals.to_csv(
+        RESULTS_DIR / "selected_model_bootstrap_intervals.csv",
+        index=False,
+    )
+    return intervals
+
+
 def run_machine_learning(
     df: pd.DataFrame,
-) -> tuple[pd.DataFrame, str, Pipeline, pd.DataFrame, pd.DataFrame]:
-    """Compare models on one patient-independent held-out partition."""
+) -> tuple[
+    pd.DataFrame,
+    str,
+    Pipeline,
+    pd.DataFrame,
+    pd.DataFrame,
+    pd.DataFrame,
+]:
+    """Select models by training-only CV, then evaluate once on final test."""
     splitter = StratifiedGroupKFold(
         n_splits=4, shuffle=True, random_state=SEED
     )
@@ -336,68 +443,169 @@ def run_machine_learning(
     if set(train[PATIENT_ID]) & set(test[PATIENT_ID]):
         raise ValueError("Patient leakage detected across train and test sets.")
 
-    models = {
-        "logistic_regression": LogisticRegression(
-            max_iter=2000,
-            class_weight="balanced",
-            random_state=SEED,
-        ),
-        "random_forest": RandomForestClassifier(
-            n_estimators=300,
-            min_samples_leaf=20,
-            max_features="sqrt",
-            class_weight="balanced_subsample",
-            random_state=SEED,
-            n_jobs=-1,
-        ),
+    cv_splitter = StratifiedGroupKFold(
+        n_splits=MODEL_SELECTION_FOLDS,
+        shuffle=True,
+        random_state=SEED + 1,
+    )
+    searches = {
+        "logistic_regression": {
+            "pipeline": Pipeline(
+                [
+                    ("preprocessor", _make_preprocessor("onehot")),
+                    (
+                        "model",
+                        LogisticRegression(
+                            max_iter=2000,
+                            random_state=SEED,
+                        ),
+                    ),
+                ]
+            ),
+            "parameters": {
+                "model__C": [0.1, 1.0, 10.0],
+                "model__class_weight": [None, "balanced"],
+            },
+        },
+        "random_forest": {
+            "pipeline": Pipeline(
+                [
+                    ("preprocessor", _make_preprocessor("onehot")),
+                    (
+                        "model",
+                        RandomForestClassifier(
+                            n_estimators=300,
+                            max_features="sqrt",
+                            class_weight="balanced_subsample",
+                            random_state=SEED,
+                            n_jobs=-1,
+                        ),
+                    ),
+                ]
+            ),
+            "parameters": {
+                "model__max_depth": [10, None],
+                "model__min_samples_leaf": [10, 30],
+            },
+        },
+        "histogram_gradient_boosting": {
+            "pipeline": Pipeline(
+                [
+                    ("preprocessor", _make_preprocessor("ordinal")),
+                    (
+                        "model",
+                        HistGradientBoostingClassifier(
+                            max_iter=200,
+                            early_stopping=True,
+                            random_state=SEED,
+                        ),
+                    ),
+                ]
+            ),
+            "parameters": {
+                "model__learning_rate": [0.05, 0.10],
+                "model__max_leaf_nodes": [15, 31],
+                "model__l2_regularization": [0.0, 1.0],
+            },
+        },
     }
 
-    trained_models: dict[str, Pipeline] = {}
-    comparison_rows = []
-    for model_name, estimator in models.items():
-        pipeline = Pipeline(
-            [("preprocessor", _make_preprocessor()), ("model", estimator)]
+    best_models: dict[str, Pipeline] = {}
+    selection_rows = []
+    search_rows = []
+    for model_name, specification in searches.items():
+        search = GridSearchCV(
+            estimator=specification["pipeline"],
+            param_grid=specification["parameters"],
+            scoring={
+                "average_precision": "average_precision",
+                "roc_auc": "roc_auc",
+            },
+            refit="average_precision",
+            cv=cv_splitter,
+            n_jobs=-1,
+            return_train_score=False,
         )
-        pipeline.fit(train[MODEL_FEATURES], train[TARGET])
-        probabilities = pipeline.predict_proba(test[MODEL_FEATURES])[:, 1]
-        predictions = (probabilities >= 0.50).astype(int)
-        trained_models[model_name] = pipeline
-        comparison_rows.append(
+        search.fit(
+            train[MODEL_FEATURES],
+            train[TARGET],
+            groups=train[PATIENT_ID],
+        )
+        best_models[model_name] = search.best_estimator_
+        best_index = int(search.best_index_)
+        selection_rows.append(
             {
                 "model": model_name,
                 "train_records": len(train),
-                "test_records": len(test),
-                "test_positive_rate": test[TARGET].mean(),
-                "roc_auc": roc_auc_score(test[TARGET], probabilities),
-                "average_precision": average_precision_score(
-                    test[TARGET], probabilities
+                "cv_folds": MODEL_SELECTION_FOLDS,
+                "cv_average_precision_mean": search.cv_results_[
+                    "mean_test_average_precision"
+                ][best_index],
+                "cv_average_precision_std": search.cv_results_[
+                    "std_test_average_precision"
+                ][best_index],
+                "cv_roc_auc_mean": search.cv_results_[
+                    "mean_test_roc_auc"
+                ][best_index],
+                "cv_roc_auc_std": search.cv_results_[
+                    "std_test_roc_auc"
+                ][best_index],
+                "best_parameters": json.dumps(
+                    search.best_params_, sort_keys=True
                 ),
-                "accuracy": accuracy_score(test[TARGET], predictions),
-                "precision": precision_score(
-                    test[TARGET], predictions, zero_division=0
-                ),
-                "recall": recall_score(
-                    test[TARGET], predictions, zero_division=0
-                ),
-                "f1": f1_score(test[TARGET], predictions, zero_division=0),
-                "positive_prediction_rate": predictions.mean(),
-                "patient_overlap": 0,
             }
         )
+        model_search = pd.DataFrame(search.cv_results_)
+        model_search.insert(0, "model", model_name)
+        search_rows.append(model_search)
 
+    pd.concat(search_rows, ignore_index=True).to_csv(
+        RESULTS_DIR / "model_selection_cv_results.csv", index=False
+    )
     comparison = (
-        pd.DataFrame(comparison_rows)
-        .sort_values(["average_precision", "roc_auc"], ascending=False)
+        pd.DataFrame(selection_rows)
+        .sort_values(
+            ["cv_average_precision_mean", "cv_roc_auc_mean"],
+            ascending=False,
+        )
         .reset_index(drop=True)
     )
-    comparison.to_csv(RESULTS_DIR / "model_comparison.csv", index=False)
-
     selected_name = str(comparison.loc[0, "model"])
-    selected_model = trained_models[selected_name]
+    selected_model = best_models[selected_name]
     selected_probabilities = selected_model.predict_proba(
         test[MODEL_FEATURES]
     )[:, 1]
     selected_predictions = (selected_probabilities >= 0.50).astype(int)
+    final_metrics = {
+        "test_records": len(test),
+        "test_positive_rate": test[TARGET].mean(),
+        "roc_auc": roc_auc_score(test[TARGET], selected_probabilities),
+        "average_precision": average_precision_score(
+            test[TARGET], selected_probabilities
+        ),
+        "accuracy": accuracy_score(test[TARGET], selected_predictions),
+        "precision": precision_score(
+            test[TARGET], selected_predictions, zero_division=0
+        ),
+        "recall": recall_score(
+            test[TARGET], selected_predictions, zero_division=0
+        ),
+        "f1": f1_score(
+            test[TARGET], selected_predictions, zero_division=0
+        ),
+        "positive_prediction_rate": selected_predictions.mean(),
+        "patient_overlap": 0,
+    }
+    for metric, value in final_metrics.items():
+        comparison[metric] = np.nan
+        comparison.loc[0, metric] = value
+    comparison["selected_for_final_test"] = False
+    comparison.loc[0, "selected_for_final_test"] = True
+    comparison.to_csv(RESULTS_DIR / "model_comparison.csv", index=False)
+    metric_intervals = _bootstrap_metric_intervals(
+        test[TARGET].to_numpy(),
+        selected_probabilities,
+    )
 
     test_predictions = test[
         [
@@ -423,8 +631,22 @@ def run_machine_learning(
     estimator = selected_model.named_steps["model"]
     if selected_name == "logistic_regression":
         importance_values = np.abs(estimator.coef_[0])
-    else:
+    elif selected_name == "random_forest":
         importance_values = estimator.feature_importances_
+    else:
+        from sklearn.inspection import permutation_importance
+
+        permutation = permutation_importance(
+            selected_model,
+            test[MODEL_FEATURES],
+            test[TARGET],
+            scoring="average_precision",
+            n_repeats=5,
+            random_state=SEED,
+            n_jobs=-1,
+        )
+        transformed_names = np.array(MODEL_FEATURES)
+        importance_values = permutation.importances_mean
     feature_importance = (
         pd.DataFrame(
             {
@@ -463,6 +685,7 @@ def run_machine_learning(
         selected_model,
         test_predictions,
         feature_importance,
+        metric_intervals,
     )
 
 
@@ -988,6 +1211,7 @@ def run_integrated_system(
         selected_model,
         test_predictions,
         feature_importance,
+        metric_intervals,
     ) = run_machine_learning(df)
     fairness_audit, fairness_comparisons, fairness_status = (
         run_fairness_audit(test_predictions)
@@ -1082,6 +1306,7 @@ def run_integrated_system(
         "selected_model": selected_model,
         "test_predictions": test_predictions,
         "feature_importance": feature_importance,
+        "metric_intervals": metric_intervals,
         "fairness_audit": fairness_audit,
         "fairness_comparisons": fairness_comparisons,
         "fairness_status": fairness_status,

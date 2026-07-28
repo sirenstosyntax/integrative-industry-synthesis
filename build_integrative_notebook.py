@@ -108,16 +108,22 @@ display(outputs["utilization_results"])
 display(Image(filename="figures/readmission_by_prior_emergency_use.png", width=750))"""
     ),
     nbf.v4.new_markdown_cell(
-        """## 3. Machine-Learning Comparison
+        """## 3. Training-Only Model Selection and Final Evaluation
 
-Logistic regression and random forest use the same patient-independent held-out partition. Average precision is the primary selection metric because 30-day readmission is uncommon; ROC AUC and threshold-based metrics provide complementary evidence. The model output is only a review-queue signal."""
+The final test partition remains untouched while logistic regression, random forest, and histogram gradient boosting are tuned with four-fold cross-validation inside the training data. Average precision is the primary selection metric because 30-day readmission is uncommon, with ROC AUC secondary. Only the selected configuration is evaluated on the final test set. Bootstrap intervals quantify uncertainty. The model output is only a review-queue signal."""
     ),
     nbf.v4.new_code_cell(
         """display(outputs["model_comparison"])
+display(outputs["metric_intervals"])
 display(outputs["feature_importance"].head(12))
 display(Image(filename="figures/selected_model_feature_importance.png", width=800))
 
-assert outputs["model_comparison"]["patient_overlap"].eq(0).all()
+selected_row = outputs["model_comparison"].query(
+    "selected_for_final_test == True"
+).iloc[0]
+assert selected_row["patient_overlap"] == 0
+assert outputs["model_comparison"]["selected_for_final_test"].sum() == 1
+assert outputs["metric_intervals"]["bootstrap_samples"].ge(1000).all()
 print("Patient leakage check: PASSED")"""
     ),
     nbf.v4.new_markdown_cell(

@@ -1,3 +1,4 @@
-model,train_records,test_records,test_positive_rate,roc_auc,average_precision,accuracy,precision,recall,f1,positive_prediction_rate,patient_overlap
-logistic_regression,52492,17498,0.08983883872442565,0.6437645452456798,0.16452040826476044,0.6737912904331924,0.14072272411396802,0.5152671755725191,0.2210698689956332,0.3289518802148817,0
-random_forest,52492,17498,0.08983883872442565,0.6420737577964754,0.16233698981742553,0.7468282089381644,0.15976190476190477,0.4268447837150127,0.2325017325017325,0.24002743170648075,0
+model,train_records,cv_folds,cv_average_precision_mean,cv_average_precision_std,cv_roc_auc_mean,cv_roc_auc_std,best_parameters,test_records,test_positive_rate,roc_auc,average_precision,accuracy,precision,recall,f1,positive_prediction_rate,patient_overlap,selected_for_final_test
+random_forest,52492,4,0.16872678424850457,0.0023301717901014095,0.6433989564995373,0.0040213622425859475,"{""model__max_depth"": 10, ""model__min_samples_leaf"": 10}",17498.0,0.08983883872442565,0.6443330740233376,0.1661954749531787,0.6873928448965596,0.14408327246165084,0.5019083969465649,0.2238933030646992,0.31295005143444965,0.0,True
+histogram_gradient_boosting,52492,4,0.16870943800242275,0.001098612600879621,0.6409936844210284,0.004459387622412368,"{""model__l2_regularization"": 0.0, ""model__learning_rate"": 0.05, ""model__max_leaf_nodes"": 15}",,,,,,,,,,,False
+logistic_regression,52492,4,0.16638690165366113,0.00213887067698735,0.6399424480198798,0.0019075694831265806,"{""model__C"": 1.0, ""model__class_weight"": null}",,,,,,,,,,,False

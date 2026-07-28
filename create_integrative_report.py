@@ -28,6 +28,7 @@ REPORT_DATE = "July 28, 2026"
 required_files = [
     ARCHITECTURE_PATH,
     RESULTS_DIR / "model_comparison.csv",
+    RESULTS_DIR / "selected_model_bootstrap_intervals.csv",
     RESULTS_DIR / "fairness_group_comparisons.csv",
     RESULTS_DIR / "fairness_method_validation.csv",
     RESULTS_DIR / "llm_case_materials.csv",
@@ -42,6 +43,9 @@ if missing:
     )
 
 models = pd.read_csv(RESULTS_DIR / "model_comparison.csv")
+intervals = pd.read_csv(
+    RESULTS_DIR / "selected_model_bootstrap_intervals.csv"
+).set_index("metric")
 fairness = pd.read_csv(RESULTS_DIR / "fairness_group_comparisons.csv")
 validation = pd.read_csv(RESULTS_DIR / "fairness_method_validation.csv")
 drafts = pd.read_csv(RESULTS_DIR / "llm_case_materials.csv")
@@ -57,7 +61,13 @@ if not drafts["safety_validation_passed"].all():
 if str(summary_values.get("genuine_llm_inference_executed", "")).lower() != "true":
     raise ValueError("Integrated summary does not record genuine LLM execution.")
 
-selected = models.iloc[0]
+selected_rows = models.loc[models["selected_for_final_test"]]
+if len(selected_rows) != 1:
+    raise ValueError("Exactly one model must be selected for final testing.")
+selected = selected_rows.iloc[0]
+selected_model_label = str(selected["model"]).replace("_", " ").title()
+roc_interval = intervals.loc["roc_auc"]
+ap_interval = intervals.loc["average_precision"]
 review_count = int(
     (fairness["governance_action"] == "REVIEW_REQUIRED").sum()
 )
@@ -265,9 +275,14 @@ add_body(
     "patient, the analytic cohort contains 69,990 encounters."
 )
 add_body(
-    f"Logistic regression was selected empirically over random forest on a common, "
-    f"patient-independent test partition. It achieved ROC AUC {selected['roc_auc']:.3f} "
-    f"and average precision {selected['average_precision']:.3f}. Those results are "
+    f"Four-fold cross-validation within the training data selected "
+    f"{selected_model_label.lower()} before the final test data were examined. On "
+    f"the untouched test partition, it achieved ROC AUC {selected['roc_auc']:.3f} "
+    f"(95% bootstrap CI [{roc_interval['lower_bound']:.3f}, "
+    f"{roc_interval['upper_bound']:.3f}]) and average precision "
+    f"{selected['average_precision']:.3f} (95% bootstrap CI "
+    f"[{ap_interval['lower_bound']:.3f}, {ap_interval['upper_bound']:.3f}]). "
+    f"Those results are "
     f"moderate and support only a review-queue experiment. The fairness rule produced "
     f"{review_count} review triggers. In 200 independent-null simulations its "
     f"familywise false-positive rate was {null_rate:.1%}; in 200 simulations with an "
@@ -322,12 +337,16 @@ add_body(
 )
 add_body(
     "<b>Machine Learning Workflow.</b> The NEMSIS modeling work informed fixed seeds, "
-    "patient-independent partitioning, common evaluation data, and comparison of an "
-    "interpretable linear model with a nonlinear ensemble. Average precision is the "
-    "primary selection measure because only about nine percent of held-out encounters "
-    "have the positive outcome. ROC AUC, precision, recall, F1, and accuracy remain "
-    "visible so that no single score hides the operational tradeoff. Model feature "
-    "importance is an explanation of model behavior, not evidence of causality."
+    "patient-independent partitioning and comparison of interpretable linear and "
+    "nonlinear models. Four transparent utilization features were derived from the "
+    "source counts. Logistic regression, random forest, and histogram gradient "
+    "boosting were tuned using four-fold cross-validation inside the training data. "
+    "Average precision was the primary selection measure because only about nine "
+    "percent of held-out encounters have the positive outcome; ROC AUC was secondary. "
+    "Only the selected configuration was evaluated on the untouched test set, and "
+    "bootstrap intervals quantify uncertainty. Threshold metrics remain visible so "
+    "that no single score hides the operational tradeoff. Feature importance explains "
+    "model behavior, not causality."
 )
 add_body(
     "<b>Generative AI.</b> The earlier narrative-generation work showed that fluent "
@@ -392,9 +411,19 @@ results_data = [
     ["System metric", "Observed result"],
     ["Eligible unique-patient encounters", "69,990"],
     ["Held-out encounters", f"{int(selected['test_records']):,}"],
-    ["Selected model", "Logistic regression"],
-    ["ROC AUC", f"{selected['roc_auc']:.3f}"],
-    ["Average precision", f"{selected['average_precision']:.3f}"],
+    ["Selected model", selected_model_label],
+    [
+        "ROC AUC (95% CI)",
+        f"{selected['roc_auc']:.3f} "
+        f"[{roc_interval['lower_bound']:.3f}, "
+        f"{roc_interval['upper_bound']:.3f}]",
+    ],
+    [
+        "Average precision (95% CI)",
+        f"{selected['average_precision']:.3f} "
+        f"[{ap_interval['lower_bound']:.3f}, "
+        f"{ap_interval['upper_bound']:.3f}]",
+    ],
     ["Test precision", f"{selected['precision']:.3f}"],
     ["Test recall", f"{selected['recall']:.3f}"],
     ["Fairness review triggers", str(review_count)],
@@ -437,13 +466,18 @@ story.extend(
     ]
 )
 add_body(
-    "The real outcome makes model comparison empirical. Logistic regression's "
-    "average precision exceeded random forest by a small margin, while random forest "
-    "produced a somewhat higher threshold-based F1. Selection followed the "
-    "predeclared average-precision rule, not whichever metric made the system appear "
-    "strongest. The result is intentionally described as modest. It shows some "
-    "ranking information beyond the base rate, but it does not establish calibration, "
-    "transportability, treatment effect, or outreach benefit."
+    f"The real outcome makes model comparison empirical. Training-only cross-validation "
+    f"selected {selected_model_label.lower()} by the predeclared average-precision "
+    f"rule, with ROC AUC used only as a secondary tie-breaker. The selected model was "
+    f"then evaluated once on the final test data. Random forest and histogram gradient "
+    f"boosting were effectively tied in cross-validated average precision (0.168727 "
+    f"versus 0.168709), so the numerical winner should not be interpreted as evidence "
+    f"of meaningful superiority. Compared with the earlier test-set "
+    f"selection workflow, average precision increased only slightly, from 0.164 to "
+    f"{selected['average_precision']:.3f}. The substantive improvement is methodological "
+    f"credibility, not materially stronger discrimination. The result shows some "
+    "ranking information beyond the 0.090 base rate, but it does not establish "
+    "calibration, transportability, treatment effect, or outreach benefit."
 )
 
 story.append(

@@ -12,6 +12,10 @@ number_outpatient,model_feature,UCI encounter field used as a number outpatient 
 number_emergency,model_feature,UCI encounter field used as a number emergency predictor.
 number_inpatient,model_feature,UCI encounter field used as a number inpatient predictor.
 number_diagnoses,model_feature,UCI encounter field used as a number diagnoses predictor.
+total_prior_utilization,model_feature,UCI encounter field used as a total prior utilization predictor.
+any_prior_emergency_use,model_feature,UCI encounter field used as a any prior emergency use predictor.
+any_prior_inpatient_use,model_feature,UCI encounter field used as a any prior inpatient use predictor.
+any_prior_outpatient_use,model_feature,UCI encounter field used as a any prior outpatient use predictor.
 admission_type_id,model_feature,UCI encounter field used as a admission type id predictor.
 discharge_disposition_id,model_feature,UCI encounter field used as a discharge disposition id predictor.
 admission_source_id,model_feature,UCI encounter field used as a admission source id predictor.
