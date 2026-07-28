@@ -1,44 +1,144 @@
-﻿# Familiar Faces: Integrative Industry Synthesis
+# Familiar Faces: Industry-Integrated AI Systems Synthesis
 
-## Project Overview
+Familiar Faces is a human-supervised research prototype exploring how a community-paramedicine or care-transition team might organize review after hospitalization.
 
-Familiar Faces is a human-supervised AI prototype exploring how community paramedicine programs might prioritize and plan outreach for frequent users of emergency medical services.
+The revised system genuinely implements and connects three AI domains:
 
-The project integrates synthetic EHR-like data, statistical analysis, machine-learning comparison, fairness auditing, controlled nonclinical drafting, and mandatory human review.
+1. Real-data statistical analysis
+2. Supervised machine learning
+3. Generative AI using live OpenAI Responses API inference
 
-This is an educational synthetic-data prototype. It is not approved for clinical use, operational deployment, eligibility decisions, or autonomous patient contact.
+The project also implements a statistically validated fairness-governance layer, deterministic LLM-output safety checks, and a mandatory human-review boundary.
 
-## System Architecture
+This is an educational, deidentified-data research prototype. It is not approved for clinical use, eligibility decisions, operational deployment, or autonomous patient contact.
 
-![Familiar Faces system architecture](figures/familiar_faces_system_architecture.png)
+## Industry Problem and System Boundary
 
-The workflow includes synthetic-data validation, descriptive analysis, advisory machine-learning prioritization, fairness-governance assessment, controlled drafting, automated safety validation, and human review.
+Repeated emergency use and hospital readmission may indicate a need for additional care-transition review, but readmission does not by itself establish outreach need, patient preference, eligibility, or likely benefit.
 
-All outputs are decision-support materials. They do not authorize or initiate real-world actions.
+The system may:
+
+- Describe historical encounter patterns
+- Estimate an observed 30-day-readmission outcome
+- Order records for authorized human review
+- Draft nonclinical verification questions and conditional coordination options
+- Audit protected-group model behavior
+
+The system may not:
+
+- Diagnose or recommend treatment
+- Recommend medication or dose changes
+- Determine program eligibility
+- Infer undocumented social or clinical needs
+- Use protected demographics as predictors or LLM inputs
+- Contact anyone automatically
+- Replace authorized professional review
 
 ## Data
 
-The project uses 3,000 entirely synthetic patient records. No protected health information or real patient data is included.
+The project uses the public **Diabetes 130-US Hospitals for Years 1999–2008** dataset from the UCI Machine Learning Repository:
 
-Age group, sex, and race/ethnicity are retained only for post-model fairness auditing. They are excluded from model predictors and generated case materials.
+> Clore, J., Cios, K., DeShazo, J., & Strack, B. (2014). *Diabetes 130-US Hospitals for Years 1999-2008* [Data set]. UCI Machine Learning Repository. https://doi.org/10.24432/C5230J
+
+The source contains 101,766 deidentified hospital encounters. The analytic cohort:
+
+- Excludes discharge dispositions recorded as hospice or expired
+- Sorts encounters by deidentified encounter identifier
+- Retains the first eligible encounter per patient
+- Contains 69,990 unique-patient encounters
+- Defines the positive outcome as recorded readmission within 30 days
+
+Keeping one encounter per patient prevents repeat-patient leakage across the training and test sets.
+
+## Machine Learning
+
+Sixteen nonprotected encounter and prior-utilization fields are used as predictors. Age, gender, race, patient number, and encounter number are excluded.
+
+The workflow compares:
+
+- Class-weighted logistic regression
+- Class-weighted random forest
+
+Both models use the same patient-independent held-out partition. Average precision is the primary selection metric because the positive outcome is uncommon. ROC AUC, accuracy, precision, recall, and F1 are also reported.
+
+Current analytic results:
+
+| Metric | Result |
+|---|---:|
+| Eligible unique-patient encounters | 69,990 |
+| Training records | 52,492 |
+| Test records | 17,498 |
+| Test positive rate | 8.98% |
+| Selected model | Logistic regression |
+| ROC AUC | 0.644 |
+| Average precision | 0.165 |
+| Precision at 0.50 threshold | 0.141 |
+| Recall at 0.50 threshold | 0.515 |
+| Patient overlap | 0 |
+
+These results support only a limited, human-reviewed research demonstration.
+
+## Validated Fairness Governance
+
+Age, gender, and race are retained only for post-model auditing.
+
+The audit:
+
+- Reports 95% Wilson confidence intervals for group rates
+- Requires at least 500 total group records
+- Requires at least 200 observations in the relevant outcome-conditioned denominator
+- Compares eligible groups with the largest reference group
+- Applies Holm adjustment across the complete comparison family
+- Requires both an absolute difference of at least 0.10 and adjusted *p* < .05 for `REVIEW_REQUIRED`
+
+The rule is tested in controlled simulations:
+
+| Validation scenario | Simulations | Result |
+|---|---:|---:|
+| Independent-null groups across three audit fields and three metrics | 200 | 0.0% familywise trigger rate |
+| Injected 0.15 review-flag disparity | 200 | 100.0% detection rate |
+
+The real-data audit currently returns `REVIEW_REQUIRED`. This is a governance signal requiring investigation; it is not a legal conclusion, causal finding, or automatic model-rejection decision.
+
+## Genuine Generative-AI Component
+
+When `--generate-llm` is supplied, the system:
+
+1. Selects five high-probability held-out records.
+2. Converts them to demographics-free case identifiers and numerical encounter facts.
+3. Sends those inputs to an OpenAI model through the Responses API.
+4. Uses Structured Outputs to require a defined response schema.
+5. Applies a separate deterministic safety validator.
+6. Stops if any draft fails validation.
+
+The validator rejects:
+
+- Protected-demographic language
+- Diagnosis or prescribing language
+- Dose-change language
+- Autonomous eligibility or contact language
+- Missing deidentified-data, nonclinical, or human-review notices
+
+No API key is stored in the notebook, source code, output files, or repository.
 
 ## Project Structure
 
-The primary project files are:
-
-- `data/familiar_faces_synthetic.csv` — synthetic patient records
-- `data/data_dictionary.csv` — field definitions
-- `familiar_faces_system.py` — integrated analytical pipeline
+- `data/raw/diabetic_data.csv` — original UCI encounter data
+- `data/raw/IDS_mapping.csv` — UCI identifier mapping file
+- `data/processed/familiar_faces_uci_encounters.csv` — reproducible analytic cohort
+- `data/processed/data_dictionary.csv` — field roles and descriptions
+- `familiar_faces_system.py` — integrated analysis, modeling, fairness, and LLM pipeline
+- `build_integrative_notebook.py` — source-notebook builder
 - `integrative_industry_synthesis.ipynb` — source notebook
 - `integrative_industry_synthesis_executed.ipynb` — executed notebook
+- `create_architecture_diagram.py` — architecture figure builder
+- `create_integrative_report.py` — synthesis PDF builder
 - `figures/` — architecture and analytical figures
-- `results/` — statistical, model, fairness, and drafting outputs
+- `results/` — model, fairness, simulation, generation, and summary artifacts
 
 ## Environment Setup
 
-The project was developed using Python in a virtual environment.
-
-From PowerShell:
+From PowerShell in the repository root:
 
 ```powershell
 python -m venv .venv
@@ -47,89 +147,85 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## Reproducing the Analysis
+## Reproducing the Analytic Workflow
 
-Run the complete integrated pipeline:
+Run the real-data analysis, model comparison, and fairness validation without making an API call:
 
 ```powershell
-python familiar_faces_system.py
+python .\familiar_faces_system.py
 ```
 
 A successful run ends with:
 
 ```text
-End-to-end pipeline: PASSED
-Deployment status: EDUCATIONAL SYNTHETIC-DATA PROTOTYPE
+End-to-end analytic pipeline: PASSED
+LLM component: NOT REQUESTED
 Human review required: True
 ```
 
-## Statistical Analysis
+## Running the Genuine LLM Component
 
-The statistical component summarizes EMS utilization, emergency-department visits, social-support needs, primary-care connection, and simulated outreach-response rates.
+Configure `OPENAI_API_KEY` in the current PowerShell window without displaying it. Then run:
 
-These results describe relationships within synthetic data. They do not establish causation or represent clinical outcomes.
+```powershell
+python .\familiar_faces_system.py --generate-llm
+```
 
-## Machine Learning
+The default model is `gpt-5.6`. A different available model can be supplied explicitly:
 
-The project compares logistic regression and random forest classifiers using the same stratified training and test sets.
+```powershell
+python .\familiar_faces_system.py --generate-llm --model gpt-5.6
+```
 
-Logistic regression was selected with a test ROC AUC of 0.685 and average precision of 0.579. This moderate performance supports use only as a human-reviewed advisory prioritization signal—not as an autonomous decision system.
+A successful full run ends with:
 
-## Fairness Governance
+```text
+End-to-end analytic pipeline: PASSED
+LLM component: EXECUTED AND VALIDATED
+Human review required: True
+```
 
-Protected demographic attributes are excluded from model training and retained only for post-model auditing.
+## Rebuilding and Executing the Notebook
 
-The audit compares human-review flag rates, true-positive rates, and false-positive rates. Groups with fewer than 25 test records are excluded from disparity calculations.
+The API key must remain configured in the same PowerShell window:
 
-The prototype produced an overall status of REVIEW_REQUIRED, with seven comparisons requiring review and two small groups excluded. The 0.10 monitoring threshold is not a legal definition of fairness or deployment approval.
+```powershell
+python .\build_integrative_notebook.py
+jupyter nbconvert --to notebook --execute .\integrative_industry_synthesis.ipynb --output .\integrative_industry_synthesis_executed.ipynb --ExecutePreprocessor.timeout=1200
+```
 
-## Controlled Drafting
+The executed notebook performs the genuine LLM call and asserts:
 
-The system creates 12 deterministic, constrained case summaries and nonclinical outreach-plan drafts for selected synthetic records.
+- Zero patient overlap
+- Fairness null trigger rate no greater than 5%
+- Injected-disparity detection rate at least 80%
+- Genuine structured LLM inference occurred
+- Every draft passed deterministic safety validation
+- No demographic field was sent or detected
+- Human review remains required
 
-Drafts exclude demographic information, avoid diagnosis and treatment advice, prohibit autonomous eligibility decisions and patient contact, and require human review. Automated safety validation passed for all 12 drafts.
+## Rebuilding the Figure and Report
 
-This component applies safeguards informed by generative-AI development but does not perform live large-language-model inference.
+After the full LLM run:
 
-## Safety Boundaries
+```powershell
+python .\create_architecture_diagram.py
+python .\create_integrative_report.py
+```
 
-The prototype requires:
-
-- Synthetic data only
-- No protected demographics as model predictors
-- No demographic information in generated materials
-- No clinical diagnosis or treatment recommendations
-- No autonomous eligibility decisions
-- No autonomous patient contact
-- Human approval before any action
-- Fairness review when monitoring thresholds are exceeded
+The report builder requires the LLM output and refuses to create a final PDF if the genuine-inference artifact is missing.
 
 ## Limitations
 
-- All records and outcomes are synthetic.
-- The modeled outcome is simulated outreach response, not clinical benefit.
-- Predictive performance is moderate.
-- Subgroup differences require contextual investigation.
-- Some demographic groups have small test samples.
-- Feature importance does not establish causality.
-- The drafting component is deterministic rather than live LLM inference.
-- The system has not undergone clinical, legal, privacy, security, accessibility, or deployment validation.
-
-## Real-World Requirements
-
-Before any real-world pilot, the organization would require:
-
-- Formal HIPAA, privacy, and legal review
-- Authorized data-governance procedures
-- Cybersecurity controls and audit logging
-- Stakeholder and community participation
-- Consent and outreach policies
-- Independent model validation
-- Human-review and escalation procedures
-- Ongoing bias and fairness monitoring
-- Workflow and usability testing
-- Defined accountability and incident-response processes
+- The data are historical (1999–2008) and limited to hospitalized patients with diabetes.
+- The dataset is not representative of a present-day community-paramedicine population.
+- Thirty-day readmission is an imperfect proxy for outreach appropriateness or benefit.
+- Model performance is moderate and not externally validated.
+- The fairness audit is observational and does not identify the cause of a disparity.
+- Simulation results apply to the tested denominators, metrics, and injected effect size.
+- Structured output and deterministic checks cannot guarantee contextual accuracy.
+- No prospective, clinical, legal, privacy, security, accessibility, or workflow validation has occurred.
 
 ## Responsible-Use Statement
 
-Familiar Faces demonstrates how analytical and AI methods can be integrated into a governed community-paramedicine concept. It must not be interpreted as a deployable clinical system or used to make decisions about real people.
+Familiar Faces demonstrates a governed technical workflow, not a deployable clinical product. Any real-world research would require authorized data access, privacy and security controls, stakeholder participation, independent validation, consent and outreach policies, reviewer training, audit logging, escalation and appeal procedures, continuous monitoring, and prospective evaluation using patient-centered outcomes.

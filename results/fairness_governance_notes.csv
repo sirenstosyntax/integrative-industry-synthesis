@@ -1,8 +1,0 @@
-governance_item,value
-overall_status,REVIEW_REQUIRED
-demographics_used_as_model_features,False
-human_review_required,True
-minimum_audit_group_size,25
-monitoring_difference,0.1
-interpretation,Observed differences require contextual review; they do not independently establish model bias.
-deployment_certification,"This educational synthetic-data audit is not a legal, clinical, or deployment fairness certification."

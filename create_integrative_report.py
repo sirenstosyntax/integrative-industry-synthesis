@@ -1,6 +1,9 @@
+"""Create the Familiar Faces Industry-Integrated AI Systems Synthesis report."""
+
 from pathlib import Path
 import re
 
+import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import letter
@@ -19,7 +22,59 @@ from reportlab.platypus import (
 
 OUTPUT_PATH = Path("Integrative_Industry_Synthesis_Report.pdf")
 ARCHITECTURE_PATH = Path("figures/familiar_faces_system_architecture.png")
-REPORT_DATE = "July 26, 2026"
+RESULTS_DIR = Path("results")
+REPORT_DATE = "July 28, 2026"
+
+required_files = [
+    ARCHITECTURE_PATH,
+    RESULTS_DIR / "model_comparison.csv",
+    RESULTS_DIR / "fairness_group_comparisons.csv",
+    RESULTS_DIR / "fairness_method_validation.csv",
+    RESULTS_DIR / "llm_case_materials.csv",
+    RESULTS_DIR / "llm_generation_metadata.csv",
+    RESULTS_DIR / "integrated_system_summary.csv",
+]
+missing = [str(path) for path in required_files if not path.exists()]
+if missing:
+    raise FileNotFoundError(
+        "Run `python familiar_faces_system.py --generate-llm` before "
+        f"building the final report. Missing: {missing}"
+    )
+
+models = pd.read_csv(RESULTS_DIR / "model_comparison.csv")
+fairness = pd.read_csv(RESULTS_DIR / "fairness_group_comparisons.csv")
+validation = pd.read_csv(RESULTS_DIR / "fairness_method_validation.csv")
+drafts = pd.read_csv(RESULTS_DIR / "llm_case_materials.csv")
+summary = pd.read_csv(RESULTS_DIR / "integrated_system_summary.csv")
+summary_values = dict(zip(summary["system_metric"], summary["value"]))
+
+if not drafts["generation_mode"].eq(
+    "openai_responses_api_structured_output"
+).all():
+    raise ValueError("Final report requires genuine structured LLM inference.")
+if not drafts["safety_validation_passed"].all():
+    raise ValueError("Final report requires all LLM drafts to pass validation.")
+if str(summary_values.get("genuine_llm_inference_executed", "")).lower() != "true":
+    raise ValueError("Integrated summary does not record genuine LLM execution.")
+
+selected = models.iloc[0]
+review_count = int(
+    (fairness["governance_action"] == "REVIEW_REQUIRED").sum()
+)
+null_rate = float(
+    validation.loc[
+        validation["validation_scenario"] == "independent_null_group",
+        "trigger_rate",
+    ].iloc[0]
+)
+detection_rate = float(
+    validation.loc[
+        validation["validation_scenario"]
+        == "injected_flag_rate_disparity",
+        "trigger_rate",
+    ].iloc[0]
+)
+draft_passes = int(drafts["safety_validation_passed"].sum())
 
 
 styles = getSampleStyleSheet()
@@ -28,8 +83,8 @@ styles.add(
         name="ReportTitle",
         parent=styles["Title"],
         fontName="Helvetica-Bold",
-        fontSize=24,
-        leading=29,
+        fontSize=23,
+        leading=28,
         alignment=TA_CENTER,
         textColor=colors.HexColor("#263238"),
         spaceAfter=14,
@@ -40,11 +95,11 @@ styles.add(
         name="ReportSubtitle",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=12,
+        fontSize=11.5,
         leading=16,
         alignment=TA_CENTER,
         textColor=colors.HexColor("#546E7A"),
-        spaceAfter=18,
+        spaceAfter=16,
     )
 )
 styles.add(
@@ -52,24 +107,11 @@ styles.add(
         name="SectionHeading",
         parent=styles["Heading1"],
         fontName="Helvetica-Bold",
-        fontSize=16,
-        leading=20,
+        fontSize=15,
+        leading=19,
         textColor=colors.HexColor("#B7472A"),
-        spaceBefore=10,
-        spaceAfter=8,
-        keepWithNext=True,
-    )
-)
-styles.add(
-    ParagraphStyle(
-        name="Subheading",
-        parent=styles["Heading2"],
-        fontName="Helvetica-Bold",
-        fontSize=12,
-        leading=15,
-        textColor=colors.HexColor("#263238"),
-        spaceBefore=8,
-        spaceAfter=5,
+        spaceBefore=9,
+        spaceAfter=7,
         keepWithNext=True,
     )
 )
@@ -78,10 +120,10 @@ styles.add(
         name="ReportBody",
         parent=styles["BodyText"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=15,
+        fontSize=9.7,
+        leading=14.2,
         textColor=colors.HexColor("#263238"),
-        spaceAfter=8,
+        spaceAfter=7,
     )
 )
 styles.add(
@@ -89,8 +131,8 @@ styles.add(
         name="SmallNote",
         parent=styles["BodyText"],
         fontName="Helvetica-Oblique",
-        fontSize=8.5,
-        leading=12,
+        fontSize=8.2,
+        leading=11.5,
         textColor=colors.HexColor("#546E7A"),
         spaceAfter=6,
     )
@@ -100,10 +142,9 @@ styles.add(
         name="APA_Number",
         parent=styles["BodyText"],
         fontName="Helvetica-Bold",
-        fontSize=10,
-        leading=13,
-        textColor=colors.HexColor("#263238"),
-        spaceBefore=6,
+        fontSize=9.5,
+        leading=12,
+        spaceBefore=5,
         spaceAfter=2,
         keepWithNext=True,
     )
@@ -113,10 +154,9 @@ styles.add(
         name="APA_Title",
         parent=styles["BodyText"],
         fontName="Helvetica-Oblique",
-        fontSize=10,
-        leading=13,
-        textColor=colors.HexColor("#263238"),
-        spaceAfter=6,
+        fontSize=9.5,
+        leading=12,
+        spaceAfter=5,
         keepWithNext=True,
     )
 )
@@ -125,12 +165,11 @@ styles.add(
         name="ReferenceBody",
         parent=styles["BodyText"],
         fontName="Helvetica",
-        fontSize=9.5,
-        leading=14,
-        textColor=colors.HexColor("#263238"),
+        fontSize=9.2,
+        leading=13.5,
         leftIndent=0.35 * inch,
         firstLineIndent=-0.35 * inch,
-        spaceAfter=9,
+        spaceAfter=8,
     )
 )
 
@@ -139,18 +178,21 @@ def draw_page(canvas, doc):
     canvas.saveState()
     width, _ = letter
     canvas.setStrokeColor(colors.HexColor("#CFD8DC"))
-    canvas.line(doc.leftMargin, 0.55 * inch, width - doc.rightMargin, 0.55 * inch)
+    canvas.line(
+        doc.leftMargin,
+        0.55 * inch,
+        width - doc.rightMargin,
+        0.55 * inch,
+    )
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(colors.HexColor("#607D8B"))
     canvas.drawString(
         doc.leftMargin,
         0.35 * inch,
-        "Familiar Faces | Integrative Industry Synthesis",
+        "Familiar Faces | Industry-Integrated AI Systems Synthesis",
     )
     canvas.drawRightString(
-        width - doc.rightMargin,
-        0.35 * inch,
-        f"Page {doc.page}",
+        width - doc.rightMargin, 0.35 * inch, f"Page {doc.page}"
     )
     canvas.restoreState()
 
@@ -160,12 +202,11 @@ doc = SimpleDocTemplate(
     pagesize=letter,
     rightMargin=0.7 * inch,
     leftMargin=0.7 * inch,
-    topMargin=0.7 * inch,
+    topMargin=0.68 * inch,
     bottomMargin=0.75 * inch,
-    title="Familiar Faces: Integrative Industry Synthesis",
+    title="Familiar Faces: Industry-Integrated AI Systems Synthesis",
     author="Grant Collings",
 )
-
 story = []
 counted_body = []
 
@@ -177,28 +218,31 @@ def add_body(text):
 
 story.extend(
     [
-        Spacer(1, 0.55 * inch),
+        Spacer(1, 0.52 * inch),
         Paragraph("Familiar Faces", styles["ReportTitle"]),
-        Paragraph("Integrative Industry Synthesis", styles["ReportSubtitle"]),
-        Spacer(1, 0.2 * inch),
         Paragraph(
-            "A Human-Supervised AI Prototype for Community Paramedicine Outreach Planning",
+            "Industry-Integrated AI Systems Synthesis",
             styles["ReportSubtitle"],
         ),
-        Spacer(1, 0.35 * inch),
+        Spacer(1, 0.16 * inch),
+        Paragraph(
+            "A Human-Supervised Care-Transition Outreach Research Prototype",
+            styles["ReportSubtitle"],
+        ),
+        Spacer(1, 0.32 * inch),
         Paragraph("<b>Prepared by:</b> Grant Collings", styles["ReportSubtitle"]),
         Paragraph(
             "Udacity AI for Industry Applications Capstone",
             styles["ReportSubtitle"],
         ),
         Paragraph(REPORT_DATE, styles["ReportSubtitle"]),
-        Spacer(1, 0.35 * inch),
+        Spacer(1, 0.32 * inch),
         Paragraph(
-            "EDUCATIONAL SYNTHETIC-DATA PROTOTYPE",
+            "EDUCATIONAL DEIDENTIFIED-DATA RESEARCH PROTOTYPE",
             styles["ReportSubtitle"],
         ),
         Paragraph(
-            "Not approved for clinical use, operational deployment, eligibility "
+            "Not approved for clinical care, operational deployment, eligibility "
             "decisions, or autonomous patient contact.",
             styles["SmallNote"],
         ),
@@ -208,182 +252,158 @@ story.extend(
 )
 
 add_body(
-    "Familiar Faces is a human-supervised artificial intelligence prototype that "
-    "explores how a community paramedicine program might prioritize outreach review "
-    "for people who frequently use emergency medical services. Frequent emergency "
-    "use may reflect unresolved barriers involving primary care, transportation, "
-    "medication access, housing, behavioral health, or other social needs. Research "
-    "on frequent emergency department users suggests that coordinated interventions "
-    "can reduce utilization for some populations, but findings vary and do not "
-    "justify assuming that every frequent user needs the same intervention "
-    "(Althaus et al., 2011). The prototype therefore frames prediction as a limited "
-    "screening aid for authorized staff, not as a clinical judgment or eligibility "
-    "decision."
+    "Familiar Faces explores how a community paramedicine or care-transition team "
+    "might use limited AI support to organize human review after hospitalization. "
+    "The revised prototype implements three connected domains: descriptive analysis "
+    "of real, deidentified hospital encounters; supervised machine learning for an "
+    "advisory 30-day-readmission signal; and genuine large-language-model inference "
+    "for structured, nonclinical review drafts. A validated fairness layer, "
+    "deterministic output checks, and mandatory human review govern those components. "
+    "The source is the public UCI Diabetes 130-US Hospitals dataset, which contains "
+    "101,766 encounters from 1999 through 2008 (Clore et al., 2014). After excluding "
+    "hospice or expired dispositions and retaining one eligible encounter per "
+    "patient, the analytic cohort contains 69,990 encounters."
 )
 add_body(
-    "The system integrates descriptive analysis, supervised machine learning, "
-    "fairness auditing, controlled nonclinical drafting, automated safety checks, and "
-    "mandatory human review. It operates on 3,000 entirely synthetic EHR-like "
-    "records and contains no real protected health information. Logistic regression "
-    "was selected over random forest because it slightly outperformed the alternative "
-    "while remaining easier to explain. Its test ROC AUC was 0.685 and average "
-    "precision was 0.579, which represent a moderate advisory signal rather than "
-    "deployment-quality evidence. Seven subgroup comparisons exceeded the project's "
-    "monitoring threshold, producing a governance status of <b>REVIEW_REQUIRED</b>. "
-    "These results demonstrate successful technical integration while also showing "
-    "why model outputs must remain subordinate to accountable human judgment."
+    f"Logistic regression was selected empirically over random forest on a common, "
+    f"patient-independent test partition. It achieved ROC AUC {selected['roc_auc']:.3f} "
+    f"and average precision {selected['average_precision']:.3f}. Those results are "
+    f"moderate and support only a review-queue experiment. The fairness rule produced "
+    f"{review_count} review triggers. In 200 independent-null simulations its "
+    f"familywise false-positive rate was {null_rate:.1%}; in 200 simulations with an "
+    f"injected 0.15 flag-rate disparity, detection was {detection_rate:.1%}. Live "
+    f"structured inference generated {len(drafts)} case drafts, and {draft_passes} "
+    f"passed the separate safety validator. Passing does not authorize action; the "
+    f"prototype preserves an explicit human terminal boundary."
 )
 
 story.append(Paragraph("1. Industry Problem and Scope", styles["SectionHeading"]))
 add_body(
-    "The industry context is emergency medical services and community paramedicine. "
-    "Traditional emergency response is designed to stabilize immediate problems, but "
-    "repeated calls may originate from needs that cannot be resolved during a single "
-    "encounter. Community paramedicine programs are positioned to coordinate "
-    "nonemergency follow-up, connect people with existing resources, and complement "
-    "rather than replace primary or emergency care. The realistic AI opportunity is "
-    "not to diagnose patients. It is to help authorized personnel organize a review "
-    "queue and prepare consistent planning material so that limited outreach capacity "
-    "can be used more deliberately."
+    "Emergency response resolves immediate threats, but repeated emergency use and "
+    "hospital readmission may also reflect needs that a single encounter cannot "
+    "address. Community paramedicine and care-transition teams can coordinate "
+    "follow-up, verify discharge understanding, and connect people with authorized "
+    "resources. The responsible AI opportunity is therefore narrow: help staff sort "
+    "a review queue and prepare consistent questions. It is not to diagnose, predict "
+    "who deserves care, or replace professional judgment. Readmission is used because "
+    "it is an observed outcome in the source data, not because it fully represents "
+    "outreach need or likely benefit."
 )
 add_body(
-    "The system's goal is consequently narrow: estimate simulated outreach response, "
-    "surface records for human review, and generate structured nonclinical drafts. "
-    "It does not predict medical need, future deterioration, program eligibility, or "
-    "expected clinical benefit. It cannot contact a patient, approve services, or "
-    "recommend diagnosis or treatment. Those boundaries make the design appropriate "
-    "to an educational capstone and reduce the risk that a technically successful "
-    "prototype will be mistaken for an operational clinical tool."
+    "The system estimates whether an encounter was followed by readmission within 30 "
+    "days. Staff would have to interpret that signal alongside consent, current "
+    "circumstances, program criteria, and information unavailable to the model. No "
+    "component may determine eligibility, recommend treatment or medication changes, "
+    "or contact anyone. This boundary recognizes that prioritization can itself "
+    "affect access and attention. The appropriate capstone claim is technical and "
+    "governance feasibility—not clinical effectiveness."
+)
+add_body(
+    "The intended reviewer is an authorized professional, not the patient and not an "
+    "automated outreach service. The queue would provide a starting point for review, "
+    "while staff remain responsible for deciding whether a record is current, whether "
+    "contact is permitted, and whether the program has an appropriate resource. A low "
+    "score must never block review, and a high score must never compel contact. This "
+    "asymmetry is deliberate because the cost of mistaken exclusion differs from the "
+    "cost of asking a reviewer to inspect another record."
 )
 
 story.append(
-    Paragraph("2. Integration of Prior Capstone Projects", styles["SectionHeading"])
+    Paragraph("2. Cross-Domain Integration and Rationale", styles["SectionHeading"])
 )
 add_body(
-    "<b>Project 4: machine-learning workflow.</b> The NEMSIS cardiac-arrest project "
-    "established the analytical foundation for this synthesis. It required careful "
-    "cohort definition, documented preprocessing, reproducible train-test separation, "
-    "comparison of models, and interpretation of evaluation metrics in an EMS "
-    "context. Familiar Faces carries those practices forward through fixed random "
-    "seeds, a stratified split, identical evaluation partitions, and explicit "
-    "comparison of logistic regression with random forest. Project 4 also reinforced "
-    "that predictive association is not causation. Accordingly, feature importance "
-    "in this project is presented as a model explanation and not as proof that any "
-    "barrier causes outreach engagement."
+    "<b>Data Workflow.</b> Earlier data work established the importance of explicit "
+    "cohort definitions, traceable transformations, schema validation, and "
+    "reproducible outputs. Those practices now operate on a real outcome rather than "
+    "a formula-generated synthetic label. The pipeline documents exclusions, retains "
+    "the first eligible encounter per patient, and writes a processed cohort plus "
+    "data dictionary. This directly removes circular evaluation: neither predictors "
+    "nor labels are generated from the model being evaluated."
 )
 add_body(
-    "<b>Project 5: deep-learning systems.</b> The Seattle Fire 911 forecasting "
-    "project demonstrated the value of recurrent neural networks and LSTMs when the "
-    "problem contains sufficient sequential structure. It also taught an equally "
-    "important design lesson: advanced architecture should follow the problem rather "
-    "than precede it. Familiar Faces uses a small tabular synthetic dataset and "
-    "requires transparent review of individual factors. A deep neural network would "
-    "add complexity without a persuasive data or performance justification. Choosing "
-    "simpler classifiers is therefore an intentional transfer of learning from "
-    "Project 5, not an omission of cross-domain knowledge."
+    "<b>Machine Learning Workflow.</b> The NEMSIS modeling work informed fixed seeds, "
+    "patient-independent partitioning, common evaluation data, and comparison of an "
+    "interpretable linear model with a nonlinear ensemble. Average precision is the "
+    "primary selection measure because only about nine percent of held-out encounters "
+    "have the positive outcome. ROC AUC, precision, recall, F1, and accuracy remain "
+    "visible so that no single score hides the operational tradeoff. Model feature "
+    "importance is an explanation of model behavior, not evidence of causality."
 )
 add_body(
-    "<b>Project 6: generative AI.</b> The NEISS narrative transformer project showed "
-    "how generated text can vary, reproduce undesirable patterns, or appear more "
-    "authoritative than its evidence supports. That experience shaped the decision to "
-    "use deterministic, template-constrained drafting in this prototype instead of a "
-    "live language model. Drafts can summarize documented barriers and matched "
-    "resources, but they cannot invent facts or produce clinical language. Automated "
-    "validation checks each draft for prohibited content, demographic references, "
-    "and the required human-review statement. The generative-AI contribution is thus "
-    "expressed through safe content design and validation, while the known risks of "
-    "unbounded generation remain outside the system boundary."
+    "<b>Generative AI.</b> The earlier narrative-generation work showed that fluent "
+    "text can invent unsupported detail and sound more authoritative than its "
+    "evidence. This synthesis therefore implements a genuine but constrained LLM "
+    "component. Five records are converted to demographics-free, deidentified inputs "
+    "containing only utilization counts, encounter counts, and the model probability. "
+    "The OpenAI Responses API returns a defined schema containing a summary, three "
+    "verification questions, conditional coordination options, limitations, and a "
+    "human-review notice. A deterministic validator then checks every output for "
+    "protected-demographic language, clinical or prescribing language, dose changes, "
+    "autonomous eligibility or contact, and required warning phrases. Structured "
+    "output improves schema reliability but does not make generated content true or "
+    "safe by itself (OpenAI, 2026)."
 )
 add_body(
-    "<b>Project 7: agentic AI.</b> The earlier Familiar Faces outreach agent supplied "
-    "the operational pattern for tool use, permission checking, explicit state, and "
-    "human escalation. That project demonstrated that an agent should stop when "
-    "permission is denied or uncertain, urgent symptoms are present, a patient cannot "
-    "be found, or a tool fails. Project 8 translates those lessons into a broader "
-    "system architecture: analytical outputs feed controlled case materials, safety "
-    "rules constrain downstream actions, and the final action boundary remains with "
-    "authorized personnel. Integrating these projects produced one coherent workflow "
-    "rather than four disconnected technical demonstrations."
+    "<b>Deep Learning Systems and Agentic AI insights.</b> These subjects influenced "
+    "design choices but are not misrepresented as implemented domains. Sequential "
+    "deep models were unnecessary for the selected tabular encounter features, where "
+    "interpretability and limited evidence favored simpler classifiers. Likewise, a "
+    "fixed, human-supervised workflow does not need an autonomous agent. Agentic AI "
+    "work contributed the stop conditions, permission mindset, and escalation pattern. "
+    "The three implemented domains are data analysis, machine learning, and generative "
+    "AI; the other subjects supply justified constraints."
 )
 
 story.append(PageBreak())
 story.append(Paragraph("3. System Architecture", styles["SectionHeading"]))
 add_body(
-    "The architecture separates data preparation, analysis, model evaluation, "
-    "fairness governance, drafting, safety validation, and human review. Synthetic "
-    "records first pass schema and quality checks. Descriptive analysis then provides "
-    "context for model development. Two classifiers are trained on the same "
-    "stratified partition, and the selected model produces probabilities used only "
-    "to order a review queue. Protected demographic fields are excluded from model "
-    "training and generated material; they are retained in a segregated audit path "
-    "for post-model disparity assessment. Controlled drafts cannot proceed to any "
-    "real-world action, because human approval is a required terminal boundary."
+    "The architecture separates cohort preparation, descriptive analysis, model "
+    "comparison, protected-group auditing, LLM drafting, deterministic validation, "
+    "and human review. Age, gender, and race follow an audit-only path and never "
+    "enter the predictive or generative feature sets. The model probability can "
+    "select records for draft preparation, but neither the model nor the LLM can "
+    "initiate action. This separation keeps prediction, auditing, language generation, "
+    "and accountability inspectable rather than collapsing them into an opaque score."
 )
 
 architecture = Image(str(ARCHITECTURE_PATH))
-architecture.drawHeight = architecture.imageHeight * (6.85 * inch / architecture.imageWidth)
+architecture.drawHeight = architecture.imageHeight * (
+    6.85 * inch / architecture.imageWidth
+)
 architecture.drawWidth = 6.85 * inch
 story.extend(
     [
-        Spacer(1, 0.06 * inch),
         Paragraph("Figure 1", styles["APA_Number"]),
         Paragraph(
             "Familiar Faces Human-Supervised System Architecture",
             styles["APA_Title"],
         ),
         architecture,
-        Spacer(1, 0.06 * inch),
         Paragraph(
-            "<i>Note.</i> Protected attributes follow an audit-only path. No component "
-            "authorizes autonomous outreach or clinical action.",
+            "<i>Note.</i> Protected attributes are audit-only. LLM inputs are "
+            "deidentified and demographics-free. No component authorizes contact "
+            "or clinical action.",
             styles["SmallNote"],
         ),
     ]
 )
 
-story.append(
-    Paragraph("4. Data, Modeling, and Design Rationale", styles["SectionHeading"])
-)
-add_body(
-    "The dataset contains 3,000 synthetic records and 22 documented fields. Sixteen "
-    "nonprotected fields are available to the classifiers. The analysis uses fixed "
-    "seeds and a 75/25 stratified train-test split so that results are reproducible "
-    "and the positive-class proportion is represented in both partitions. Logistic "
-    "regression and random forest were evaluated with ROC AUC, average precision, "
-    "accuracy, precision, recall, and F1. Multiple metrics are necessary because a "
-    "single aggregate score can conceal operationally important tradeoffs between "
-    "missed opportunities and unnecessary staff review."
-)
-add_body(
-    "Logistic regression was selected because it achieved slightly stronger test "
-    "performance than random forest and offers coefficients that can be inspected "
-    "more directly. The choice favors interpretability, stability, and governance "
-    "over marginal complexity. Its predicted probabilities are not converted into "
-    "automatic action. They support prioritization within a human workflow where "
-    "staff can consider context unavailable to the model. The outcome itself is "
-    "simulated outreach response, which is deliberately less consequential than a "
-    "clinical target but still insufficient for deployment because synthetic labels "
-    "cannot establish real-world validity."
-)
-
 results_data = [
-    ["System metric", "Result"],
-    ["Synthetic records", "3,000"],
+    ["System metric", "Observed result"],
+    ["Eligible unique-patient encounters", "69,990"],
+    ["Held-out encounters", f"{int(selected['test_records']):,}"],
     ["Selected model", "Logistic regression"],
-    ["Test ROC AUC", "0.685"],
-    ["Average precision", "0.579"],
-    ["Test F1", "0.558"],
-    ["Fairness governance status", "REVIEW_REQUIRED"],
-    ["Comparisons requiring review", "7"],
-    ["Small audit groups excluded", "2"],
-    ["Drafts passing safety validation", "12 of 12"],
-    ["Human review required", "Yes"],
+    ["ROC AUC", f"{selected['roc_auc']:.3f}"],
+    ["Average precision", f"{selected['average_precision']:.3f}"],
+    ["Test precision", f"{selected['precision']:.3f}"],
+    ["Test recall", f"{selected['recall']:.3f}"],
+    ["Fairness review triggers", str(review_count)],
+    ["Null-simulation trigger rate", f"{null_rate:.1%}"],
+    ["Injected-disparity detection", f"{detection_rate:.1%}"],
+    ["LLM drafts passing safety gate", f"{draft_passes} of {len(drafts)}"],
 ]
-
 results_table = Table(
-    results_data,
-    colWidths=[3.9 * inch, 2.3 * inch],
-    repeatRows=1,
+    results_data, colWidths=[3.75 * inch, 2.45 * inch], repeatRows=1
 )
 results_table.setStyle(
     TableStyle(
@@ -391,8 +411,7 @@ results_table.setStyle(
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#263238")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("FONTSIZE", (0, 0), (-1, -1), 8.7),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#B0BEC5")),
             (
                 "ROWBACKGROUNDS",
@@ -401,125 +420,122 @@ results_table.setStyle(
                 [colors.white, colors.HexColor("#ECEFF1")],
             ),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 7),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ]
     )
 )
-
 story.extend(
     [
-        Paragraph("5. Results and Evaluation", styles["SectionHeading"]),
+        Paragraph("4. Results and Evaluation", styles["SectionHeading"]),
         Paragraph("Table 1", styles["APA_Number"]),
         Paragraph("Integrated Prototype Results", styles["APA_Title"]),
         results_table,
-        Spacer(1, 0.12 * inch),
+        Spacer(1, 0.1 * inch),
     ]
 )
 add_body(
-    "The pipeline executed successfully and produced all expected artifacts. "
-    "Logistic regression achieved a test ROC AUC of 0.6852, average precision of "
-    "0.5791, accuracy of 0.6467, and F1 of 0.5576. Random forest achieved a ROC AUC "
-    "of 0.6783 and F1 of 0.5179. The selected model therefore offered the stronger "
-    "overall balance, but neither result supports autonomous prioritization. The "
-    "controlled drafting stage produced 12 case materials, and all 12 passed "
-    "automated safety validation. This confirms that the implementation behaves as "
-    "designed; it does not demonstrate clinical effectiveness."
+    "The real outcome makes model comparison empirical. Logistic regression's "
+    "average precision exceeded random forest by a small margin, while random forest "
+    "produced a somewhat higher threshold-based F1. Selection followed the "
+    "predeclared average-precision rule, not whichever metric made the system appear "
+    "strongest. The result is intentionally described as modest. It shows some "
+    "ranking information beyond the base rate, but it does not establish calibration, "
+    "transportability, treatment effect, or outreach benefit."
 )
 
 story.append(
-    Paragraph("6. Ethics, Fairness, and Accountability", styles["SectionHeading"])
+    Paragraph("5. Fairness Validation and Governance", styles["SectionHeading"])
 )
 add_body(
-    "The central ethical concern is that an outreach model could distribute attention "
-    "unequally or encode existing differences in access to care. Excluding protected "
-    "attributes from prediction is not enough to guarantee fairness because other "
-    "variables can act as proxies and the outcome label can reproduce structural "
-    "inequity. Obermeyer et al. (2019) demonstrated that a health-management "
-    "algorithm generated substantial racial bias even though its proxy outcome "
-    "appeared predictive. Familiar Faces therefore separates prediction from "
-    "subgroup auditing and treats observed disparities as reasons for investigation, "
-    "not as proof that the system is fair."
+    "Removing protected attributes from training does not guarantee equitable "
+    "behavior because other features and the outcome can encode structural "
+    "differences. Health-management algorithms have produced racial disparity even "
+    "when designers used a seemingly reasonable proxy objective (Obermeyer et al., "
+    "2019). Familiar Faces therefore retains protected fields only for post-model "
+    "auditing. Each group rate includes a 95% Wilson interval. A comparison requires "
+    "at least 500 group records and at least 200 observations in the relevant outcome "
+    "denominator. Each eligible group is compared with the largest reference group."
 )
 add_body(
-    "The audit compares review-flag rates, true-positive rates, and false-positive "
-    "rates across eligible groups. Groups with fewer than 25 test records are "
-    "excluded from disparity calculations to avoid overinterpreting unstable "
-    "estimates, but exclusion is documented rather than hidden. Seven comparisons "
-    "exceeded the project threshold, so the system returns <b>REVIEW_REQUIRED</b>. "
-    "That status is a governance signal, not a legal conclusion or a score that can "
-    "be averaged away."
+    "A review trigger requires both practical and statistical evidence: an absolute "
+    "rate difference of at least 0.10 and a Holm-adjusted p-value below .05 across the "
+    "complete comparison family. The method itself is tested rather than assumed "
+    "valid. In each null simulation, three independent audit fields are randomly "
+    "assigned and flag, true-positive, and false-positive rates are evaluated. The "
+    f"observed familywise false-positive rate was {null_rate:.1%}. In the matched "
+    f"injected-disparity experiment, a 0.15 review-flag difference was detected in "
+    f"{detection_rate:.1%} of runs. These experiments address false alarms and power "
+    "under stated conditions; they do not certify fairness in all settings."
 )
 add_body(
-    "Responsible deployment also requires accountability beyond the model. NIST's AI "
-    "Risk Management Framework emphasizes governance, contextual mapping, "
-    "measurement, and ongoing management across the AI lifecycle (Tabassi, 2023). "
-    "The prototype reflects that reasoning through documented scope, reproducible "
-    "evaluation, audit outputs, human review, prohibited-use statements, and explicit "
-    "escalation. Core safeguards include synthetic data only, no autonomous contact, "
-    "no diagnosis or treatment recommendations, no eligibility decisions, and no "
-    "use of demographic fields in prediction or drafting."
+    f"The real-data audit produced {review_count} REVIEW_REQUIRED comparisons, "
+    "including age-related flag and error-rate differences and one race-related "
+    "true-positive-rate difference. These are governance signals, not proof of "
+    "discrimination or permission to alter services automatically. They require "
+    "contextual investigation, stakeholder review, sensitivity analysis, and "
+    "potential model revision. NIST's AI Risk Management Framework similarly treats "
+    "risk work as continuing governance, mapping, measurement, and management rather "
+    "than a one-time technical score (Tabassi, 2023)."
 )
 
 story.append(
-    Paragraph("7. Tradeoffs, Constraints, and Deployment Requirements", styles["SectionHeading"])
+    Paragraph("6. Ethics, Constraints, and Responsible Use", styles["SectionHeading"])
 )
 add_body(
-    "Several tradeoffs shaped the design. Logistic regression sacrifices some ability "
-    "to represent nonlinear relationships in exchange for clearer explanations and "
-    "simpler validation. Deterministic drafting sacrifices the flexibility of a live "
-    "language model in exchange for repeatability and tighter content control. "
-    "Audit-only demographic data support disparity detection but also create privacy "
-    "and governance obligations. Human review limits scale and introduces human "
-    "variation, yet it preserves accountability where errors could affect access to "
-    "support. These choices are appropriate for a high-consequence domain in which "
-    "efficiency cannot be the only objective."
+    "The primary ethical risk is unequal allocation of staff attention. Additional "
+    "risks include automation bias, privacy misuse, historical-data drift, unsupported "
+    "LLM inferences, and purpose expansion from review support to eligibility control. "
+    "The system responds with layered safeguards: deidentified public research data; "
+    "audit-only protected attributes; patient-independent evaluation; explicit "
+    "uncertainty; constrained structured generation; a separate deterministic text "
+    "gate; no autonomous action; and mandatory human review. Human oversight is not "
+    "treated as a slogan: an authorized reviewer must verify facts, consent, current "
+    "context, available resources, and the appropriateness of any next step."
 )
 add_body(
-    "The largest constraint is external validity. Synthetic records can demonstrate "
-    "code paths, metrics, and governance logic, but they cannot establish prevalence, "
-    "causal relationships, model calibration, subgroup performance, or program "
-    "benefit in a real population. Moderate model performance, small audit groups, "
-    "and the REVIEW_REQUIRED result further limit interpretation. The project has not "
-    "undergone clinical, legal, privacy, cybersecurity, accessibility, usability, or "
-    "deployment validation."
+    "Important limitations remain. The data are from 1999–2008, involve hospitalized "
+    "patients with diabetes, and do not represent a modern community-paramedicine "
+    "population. One encounter per patient improves independence but discards later "
+    "history. Readmission may be planned, unavoidable, or unrelated to appropriate "
+    "outreach. The models have not been externally validated or prospectively tested. "
+    "The fairness simulations use controlled binary assignments and one injected "
+    "effect size. LLM safety checks cannot detect every misleading implication. The "
+    "prototype has not undergone clinical, legal, privacy, cybersecurity, "
+    "accessibility, usability, or organizational validation."
 )
 add_body(
-    "Before any pilot, an organization would need authorized data-governance "
-    "procedures; privacy and legal review; security controls and audit logging; "
-    "independent model validation; calibration and subgroup analysis on representative "
-    "data; stakeholder and community participation; documented reviewer training; "
-    "appeal and escalation procedures; continuous performance and fairness "
-    "monitoring; and assigned responsibility for incidents and model retirement. "
-    "Outreach effectiveness would also need prospective evaluation against outcomes "
-    "that matter to patients and programs, not merely response probability."
+    "Before any real-world research pilot, an organization would need an approved "
+    "protocol, lawful and authorized data access, privacy and security controls, "
+    "community and patient participation, independent model validation, calibration "
+    "and subgroup analysis on representative data, reviewer training, audit logging, "
+    "appeal and escalation procedures, incident ownership, and continuous monitoring. "
+    "Prospective evaluation would need patient-centered and program outcomes—not just "
+    "readmission prediction—and a comparison showing whether the AI-assisted workflow "
+    "improves decisions without worsening inequity."
 )
 
 story.append(
-    Paragraph("8. Professional Reflection and Conclusion", styles["SectionHeading"])
+    Paragraph("7. Professional Reflection and Conclusion", styles["SectionHeading"])
 )
 add_body(
-    "This synthesis changed my understanding of AI development from building an "
-    "accurate component to designing an accountable system. My EMS experience made "
-    "the problem recognizable, but the sequence of capstone projects supplied the "
-    "technical discipline to address it responsibly: Project 4 contributed "
-    "reproducible analytics, Project 5 clarified when not to use deep learning, "
-    "Project 6 exposed the risks of unconstrained generation, and Project 7 supplied "
-    "the permission and escalation pattern. The resulting artifact demonstrates "
-    "cross-domain fluency while remaining honest about what the evidence does not "
-    "support."
+    "This revision sharpened the difference between assembling components and "
+    "integrating valid evidence. A model that predicts its own label-generating "
+    "formula is reproducible but not informative. A fairness threshold without "
+    "false-positive and detection testing can create confidence without validity. A "
+    "text template can demonstrate safeguards but is not generative AI. Replacing "
+    "those shortcuts with a real outcome, a validated audit, and executed LLM "
+    "inference made the portfolio artifact more honest and technically meaningful."
 )
 add_body(
-    "Familiar Faces is valuable as a portfolio piece because the code, executed "
-    "notebook, architecture, model comparison, fairness artifacts, controlled drafts, "
-    "and report all tell the same story. The system works as an educational prototype, "
-    "and its limitations are part of the result rather than footnotes to it. The "
-    "appropriate next stage is stakeholder and governance evaluation, followed by "
-    "carefully authorized research if the concept remains justified. It must not be "
-    "used to make decisions about real people or to authorize clinical, eligibility, "
-    "or outreach actions."
+    "Familiar Faces now demonstrates system-level judgment across data analysis, "
+    "machine learning, generative AI, fairness evaluation, and governance. Its value "
+    "does not depend on claiming deployment readiness. The strongest conclusion is "
+    "that the integrated workflow runs, exposes its limitations, and stops at the "
+    "correct boundary. Further work should begin with stakeholder and governance "
+    "review, not operational use."
 )
 
 story.extend(
@@ -527,24 +543,36 @@ story.extend(
         PageBreak(),
         Paragraph("References", styles["SectionHeading"]),
         Paragraph(
-            "Althaus, F., Paroz, S., Hugli, O., Ghali, W. A., Daeppen, J. B., "
-            "Peytremann-Bridevaux, I., &amp; Bodenmann, P. (2011). Effectiveness of "
-            "interventions targeting frequent users of emergency departments: A "
-            "systematic review. <i>Annals of Emergency Medicine, 58</i>(1), "
-            "41-52.e42. https://doi.org/10.1016/j.annemergmed.2011.03.007",
+            "Clore, J., Cios, K., DeShazo, J., &amp; Strack, B. (2014). "
+            "<i>Diabetes 130-US Hospitals for Years 1999-2008</i> [Data set]. "
+            "UCI Machine Learning Repository. https://doi.org/10.24432/C5230J",
             styles["ReferenceBody"],
         ),
         Paragraph(
-            "Obermeyer, Z., Powers, B., Vogeli, C., &amp; Mullainathan, S. (2019). "
-            "Dissecting racial bias in an algorithm used to manage the health of "
-            "populations. <i>Science, 366</i>(6464), 447-453. "
+            "Obermeyer, Z., Powers, B., Vogeli, C., &amp; Mullainathan, S. "
+            "(2019). Dissecting racial bias in an algorithm used to manage the "
+            "health of populations. <i>Science, 366</i>(6464), 447-453. "
             "https://doi.org/10.1126/science.aax2342",
             styles["ReferenceBody"],
         ),
         Paragraph(
-            "Tabassi, E. (2023). <i>Artificial intelligence risk management framework "
-            "(AI RMF 1.0)</i> (NIST AI 100-1). National Institute of Standards and "
-            "Technology. https://doi.org/10.6028/NIST.AI.100-1",
+            "OpenAI. (2026). <i>Structured model outputs</i>. "
+            "https://developers.openai.com/api/docs/guides/structured-outputs",
+            styles["ReferenceBody"],
+        ),
+        Paragraph(
+            "Strack, B., DeShazo, J. P., Gennings, C., Olmo, J. L., Ventura, S., "
+            "Cios, K. J., &amp; Clore, J. N. (2014). Impact of HbA1c "
+            "measurement on hospital readmission rates: Analysis of 70,000 "
+            "clinical database patient records. <i>BioMed Research "
+            "International, 2014</i>, Article 781670. "
+            "https://doi.org/10.1155/2014/781670",
+            styles["ReferenceBody"],
+        ),
+        Paragraph(
+            "Tabassi, E. (2023). <i>Artificial intelligence risk management "
+            "framework (AI RMF 1.0)</i> (NIST AI 100-1). National Institute of "
+            "Standards and Technology. https://doi.org/10.6028/NIST.AI.100-1",
             styles["ReferenceBody"],
         ),
     ]

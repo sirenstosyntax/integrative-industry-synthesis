@@ -67,7 +67,7 @@ ax.text(
 ax.text(
     7,
     7.65,
-    "Educational synthetic-data prototype with mandatory human oversight",
+    "Educational deidentified-data research prototype with mandatory human oversight",
     ha="center",
     va="center",
     fontsize=11,
@@ -79,7 +79,7 @@ add_box(
     3.35,
     2.0,
     1.25,
-    "Synthetic EHR-like\nDataset and\nData Dictionary",
+    "UCI Deidentified\nHospital Encounters\nand Data Dictionary",
     "#d7ebf7",
 )
 
@@ -88,7 +88,7 @@ add_box(
     3.35,
     2.0,
     1.25,
-    "Schema and\nSafety-Boundary\nValidation",
+    "Cohort, Leakage, and\nSafety-Boundary\nValidation",
     "#d9ead3",
 )
 
@@ -115,7 +115,7 @@ add_box(
     1.3,
     2.2,
     1.15,
-    "Controlled,\nConstrained Drafting",
+    "Structured LLM\nDrafting with\nDemographics-Free Input",
     "#eadcf8",
 )
 
@@ -124,7 +124,7 @@ add_box(
     4.25,
     2.2,
     1.25,
-    "Protected-Group\nFairness Audit and\nGovernance Assessment",
+    "Validated Fairness Audit:\nConfidence Intervals,\nSimulations, Governance",
     "#f4cccc",
 )
 
@@ -173,8 +173,8 @@ ax.text(
     7,
     0.53,
     (
-        "Governance boundary: no clinical decisions, no autonomous eligibility,\n"
-        "no autonomous contact, and no use of demographic fields as predictors"
+        "Governance boundary: no clinical decisions, no autonomous eligibility or contact;\n"
+        "protected fields are audit-only and every LLM draft requires safety checks plus human review"
     ),
     ha="center",
     va="center",
@@ -194,6 +194,5 @@ plt.close(fig)
 
 print("Created:", OUTPUT_PATH)
 print("Architecture diagram: PASSED")
-
 
 

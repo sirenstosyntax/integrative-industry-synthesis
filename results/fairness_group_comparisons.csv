@@ -1,0 +1,46 @@
+audit_field,group,reference_group,metric,group_denominator,reference_denominator,rate_difference,absolute_difference,raw_p_value,eligible_for_comparison,holm_adjusted_p_value,practically_large,statistically_significant,governance_action
+age,[0-10),[70-80),human_review_flag_rate,44,4386,,,,False,,False,False,INSUFFICIENT_DATA
+age,[0-10),[70-80),true_positive_rate,0,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[0-10),[70-80),false_positive_rate,44,3918,,,,False,,False,False,INSUFFICIENT_DATA
+age,[10-20),[70-80),human_review_flag_rate,140,4386,,,,False,,False,False,INSUFFICIENT_DATA
+age,[10-20),[70-80),true_positive_rate,2,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[10-20),[70-80),false_positive_rate,138,3918,,,,False,,False,False,INSUFFICIENT_DATA
+age,[20-30),[70-80),human_review_flag_rate,285,4386,,,,False,,False,False,INSUFFICIENT_DATA
+age,[20-30),[70-80),true_positive_rate,25,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[20-30),[70-80),false_positive_rate,260,3918,,,,False,,False,False,INSUFFICIENT_DATA
+age,[30-40),[70-80),human_review_flag_rate,697,4386,-0.20223438212494296,0.20223438212494296,2.711293514270503e-25,True,3.795810919978704e-24,True,True,REVIEW_REQUIRED
+age,[30-40),[70-80),true_positive_rate,47,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[30-40),[70-80),false_positive_rate,650,3918,-0.19936702399183256,0.19936702399183256,1.470793500482679e-23,True,1.912031550627483e-22,True,True,REVIEW_REQUIRED
+age,[40-50),[70-80),human_review_flag_rate,1669,4386,-0.1761884934279423,0.1761884934279423,8.601063982739715e-39,True,1.6342021567205459e-37,True,True,REVIEW_REQUIRED
+age,[40-50),[70-80),true_positive_rate,113,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[40-50),[70-80),false_positive_rate,1556,3918,-0.17170635561136985,0.17170635561136985,3.202377921565344e-35,True,5.190266087723907e-34,True,True,REVIEW_REQUIRED
+age,[50-60),[70-80),human_review_flag_rate,3094,4386,-0.14179482168538254,0.14179482168538254,2.4562524061403454e-38,True,4.4212543310526215e-37,True,True,REVIEW_REQUIRED
+age,[50-60),[70-80),true_positive_rate,220,468,-0.08150738150738146,0.08150738150738146,0.0460390407617196,True,0.0920780815234392,False,False,MONITOR
+age,[50-60),[70-80),false_positive_rate,2874,3918,-0.13946444918320347,0.13946444918320347,3.053097698661122e-35,True,5.190266087723907e-34,True,True,REVIEW_REQUIRED
+age,[60-70),[70-80),human_review_flag_rate,3921,4386,-0.08413725804195094,0.08413725804195094,6.102432002616729e-16,True,6.712675202878402e-15,False,True,MONITOR
+age,[60-70),[70-80),true_positive_rate,346,468,-0.11574279926881081,0.11574279926881081,0.0010930783762922007,True,0.004372313505168803,True,True,REVIEW_REQUIRED
+age,[60-70),[70-80),false_positive_rate,3575,3918,-0.0774089820337906,0.0774089820337906,8.044072550143064e-13,True,7.239665295128757e-12,False,True,MONITOR
+age,[80-90),[70-80),human_review_flag_rate,2842,4386,0.12410994871083958,0.12410994871083958,2.050586512290014e-25,True,3.0758797684350212e-24,True,True,REVIEW_REQUIRED
+age,[80-90),[70-80),true_positive_rate,309,468,0.1163596382042984,0.1163596382042984,0.001264623431693076,True,0.004372313505168803,True,True,REVIEW_REQUIRED
+age,[80-90),[70-80),false_positive_rate,2533,3918,0.12464403009423136,0.12464403009423136,2.614755522295477e-23,True,3.1377066267545724e-22,True,True,REVIEW_REQUIRED
+age,[90-100),[70-80),human_review_flag_rate,420,4386,,,,False,,False,False,INSUFFICIENT_DATA
+age,[90-100),[70-80),true_positive_rate,42,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[90-100),[70-80),false_positive_rate,378,3918,,,,False,,False,False,INSUFFICIENT_DATA
+gender,Male,Female,human_review_flag_rate,8237,9261,-0.048990876154520524,0.048990876154520524,5.7867952112722414e-12,True,4.050756647890569e-11,False,True,MONITOR
+gender,Male,Female,true_positive_rate,732,840,-0.013231850117096045,0.013231850117096045,0.6005379984219579,True,0.6005379984219579,False,False,MONITOR
+gender,Male,Female,false_positive_rate,7505,8421,-0.052103268683403925,0.052103268683403925,1.309673434076682e-12,True,1.0477387472613455e-11,False,True,MONITOR
+race,AfricanAmerican,Caucasian,human_review_flag_rate,3069,13170,-0.07157169460792062,0.07157169460792062,3.311495688551272e-14,True,3.3114956885512717e-13,False,True,MONITOR
+race,AfricanAmerican,Caucasian,true_positive_rate,280,1188,-0.12864357864357862,0.12864357864357862,0.00010637244566638401,True,0.00053186222833192,True,True,REVIEW_REQUIRED
+race,AfricanAmerican,Caucasian,false_positive_rate,2789,11982,-0.06608861541385819,0.06608861541385819,1.2030817703692032e-11,True,7.218490622215219e-11,False,True,MONITOR
+race,Asian,Caucasian,human_review_flag_rate,110,13170,,,,False,,False,False,INSUFFICIENT_DATA
+race,Asian,Caucasian,true_positive_rate,11,1188,,,,False,,False,False,INSUFFICIENT_DATA
+race,Asian,Caucasian,false_positive_rate,99,11982,,,,False,,False,False,INSUFFICIENT_DATA
+race,Hispanic,Caucasian,human_review_flag_rate,372,13170,,,,False,,False,False,INSUFFICIENT_DATA
+race,Hispanic,Caucasian,true_positive_rate,33,1188,,,,False,,False,False,INSUFFICIENT_DATA
+race,Hispanic,Caucasian,false_positive_rate,339,11982,,,,False,,False,False,INSUFFICIENT_DATA
+race,Other,Caucasian,human_review_flag_rate,286,13170,,,,False,,False,False,INSUFFICIENT_DATA
+race,Other,Caucasian,true_positive_rate,20,1188,,,,False,,False,False,INSUFFICIENT_DATA
+race,Other,Caucasian,false_positive_rate,266,11982,,,,False,,False,False,INSUFFICIENT_DATA
+race,Unknown/Not recorded,Caucasian,human_review_flag_rate,491,13170,,,,False,,False,False,INSUFFICIENT_DATA
+race,Unknown/Not recorded,Caucasian,true_positive_rate,40,1188,,,,False,,False,False,INSUFFICIENT_DATA
+race,Unknown/Not recorded,Caucasian,false_positive_rate,451,11982,,,,False,,False,False,INSUFFICIENT_DATA
