@@ -1,3 +1,4 @@
-model,test_records,roc_auc,average_precision,accuracy,precision,recall,f1,positive_prediction_rate
-logistic_regression,750,0.6852081713226057,0.5790840021213592,0.6466666666666666,0.5439739413680782,0.571917808219178,0.5575959933222037,0.4093333333333333
-random_forest,750,0.6782766046539452,0.5724297039037247,0.64,0.5410447761194029,0.4965753424657534,0.5178571428571429,0.35733333333333334
+model,train_records,cv_folds,cv_average_precision_mean,cv_average_precision_std,cv_roc_auc_mean,cv_roc_auc_std,best_parameters,test_records,test_positive_rate,roc_auc,average_precision,accuracy,precision,recall,f1,positive_prediction_rate,patient_overlap,selected_for_final_test
+histogram_gradient_boosting,52492,4,0.16870943800242275,0.001098612600879621,0.6409936844210284,0.004459387622412368,"{""model__l2_regularization"": 0.0, ""model__learning_rate"": 0.05, ""model__max_leaf_nodes"": 15}",17498.0,0.08983883872442565,0.6409377787023253,0.17082813852598927,0.9101611612755743,0.0,0.0,0.0,0.0,0.0,True
+random_forest,52492,4,0.16866213154480192,0.0023914017497536273,0.6433956509967157,0.004077215237017653,"{""model__max_depth"": 10, ""model__min_samples_leaf"": 10}",,,,,,,,,,,False
+logistic_regression,52492,4,0.16638690165366113,0.00213887067698735,0.6399424480198798,0.0019075694831265806,"{""model__C"": 1.0, ""model__class_weight"": null}",,,,,,,,,,,False

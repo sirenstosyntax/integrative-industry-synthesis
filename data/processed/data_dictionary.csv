@@ -1,0 +1,27 @@
+field_name,role,description
+encounter_id,identifier,Deidentified hospital encounter identifier.
+patient_nbr,identifier,Deidentified patient identifier; used only to prevent repeat-patient leakage.
+age,fairness_audit_only,Age interval retained only for post-model fairness auditing.
+gender,fairness_audit_only,Recorded gender retained only for post-model fairness auditing.
+race,fairness_audit_only,Recorded race retained only for post-model fairness auditing.
+time_in_hospital,model_feature,UCI encounter field used as a time in hospital predictor.
+num_lab_procedures,model_feature,UCI encounter field used as a num lab procedures predictor.
+num_procedures,model_feature,UCI encounter field used as a num procedures predictor.
+num_medications,model_feature,UCI encounter field used as a num medications predictor.
+number_outpatient,model_feature,UCI encounter field used as a number outpatient predictor.
+number_emergency,model_feature,UCI encounter field used as a number emergency predictor.
+number_inpatient,model_feature,UCI encounter field used as a number inpatient predictor.
+number_diagnoses,model_feature,UCI encounter field used as a number diagnoses predictor.
+total_prior_utilization,model_feature,UCI encounter field used as a total prior utilization predictor.
+any_prior_emergency_use,model_feature,UCI encounter field used as a any prior emergency use predictor.
+any_prior_inpatient_use,model_feature,UCI encounter field used as a any prior inpatient use predictor.
+any_prior_outpatient_use,model_feature,UCI encounter field used as a any prior outpatient use predictor.
+admission_type_id,model_feature,UCI encounter field used as a admission type id predictor.
+discharge_disposition_id,model_feature,UCI encounter field used as a discharge disposition id predictor.
+admission_source_id,model_feature,UCI encounter field used as a admission source id predictor.
+max_glu_serum,model_feature,UCI encounter field used as a max glu serum predictor.
+A1Cresult,model_feature,UCI encounter field used as a A1Cresult predictor.
+insulin,model_feature,UCI encounter field used as a insulin predictor.
+change,model_feature,UCI encounter field used as a change predictor.
+diabetesMed,model_feature,UCI encounter field used as a diabetesMed predictor.
+readmitted_within_30_days,outcome,One when the recorded readmission category is less than 30 days.

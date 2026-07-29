@@ -1,0 +1,2 @@
+response_id,model_requested,drafts_requested,drafts_returned,drafts_passing_safety_validation,demographic_fields_sent,human_review_required
+resp_0bea79415d505ebf006a693377a5548193aa8d0afd1d102e54,gpt-5.6,5,5,5,False,True

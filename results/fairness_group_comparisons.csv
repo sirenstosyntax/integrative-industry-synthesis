@@ -1,0 +1,46 @@
+audit_field,group,reference_group,metric,group_denominator,reference_denominator,rate_difference,absolute_difference,raw_p_value,eligible_for_comparison,holm_adjusted_p_value,practically_large,statistically_significant,governance_action
+age,[0-10),[70-80),human_review_flag_rate,44,4386,,,,False,,False,False,INSUFFICIENT_DATA
+age,[0-10),[70-80),true_positive_rate,0,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[0-10),[70-80),false_positive_rate,44,3918,,,,False,,False,False,INSUFFICIENT_DATA
+age,[10-20),[70-80),human_review_flag_rate,140,4386,,,,False,,False,False,INSUFFICIENT_DATA
+age,[10-20),[70-80),true_positive_rate,2,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[10-20),[70-80),false_positive_rate,138,3918,,,,False,,False,False,INSUFFICIENT_DATA
+age,[20-30),[70-80),human_review_flag_rate,285,4386,,,,False,,False,False,INSUFFICIENT_DATA
+age,[20-30),[70-80),true_positive_rate,25,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[20-30),[70-80),false_positive_rate,260,3918,,,,False,,False,False,INSUFFICIENT_DATA
+age,[30-40),[70-80),human_review_flag_rate,697,4386,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[30-40),[70-80),true_positive_rate,47,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[30-40),[70-80),false_positive_rate,650,3918,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[40-50),[70-80),human_review_flag_rate,1669,4386,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[40-50),[70-80),true_positive_rate,113,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[40-50),[70-80),false_positive_rate,1556,3918,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[50-60),[70-80),human_review_flag_rate,3094,4386,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[50-60),[70-80),true_positive_rate,220,468,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[50-60),[70-80),false_positive_rate,2874,3918,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[60-70),[70-80),human_review_flag_rate,3921,4386,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[60-70),[70-80),true_positive_rate,346,468,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[60-70),[70-80),false_positive_rate,3575,3918,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[80-90),[70-80),human_review_flag_rate,2842,4386,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[80-90),[70-80),true_positive_rate,309,468,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[80-90),[70-80),false_positive_rate,2533,3918,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+age,[90-100),[70-80),human_review_flag_rate,420,4386,,,,False,,False,False,INSUFFICIENT_DATA
+age,[90-100),[70-80),true_positive_rate,42,468,,,,False,,False,False,INSUFFICIENT_DATA
+age,[90-100),[70-80),false_positive_rate,378,3918,,,,False,,False,False,INSUFFICIENT_DATA
+gender,Male,Female,human_review_flag_rate,8237,9261,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+gender,Male,Female,true_positive_rate,732,840,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+gender,Male,Female,false_positive_rate,7505,8421,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+race,AfricanAmerican,Caucasian,human_review_flag_rate,3069,13170,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+race,AfricanAmerican,Caucasian,true_positive_rate,280,1188,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+race,AfricanAmerican,Caucasian,false_positive_rate,2789,11982,0.0,0.0,1.0,True,1.0,False,False,MONITOR
+race,Asian,Caucasian,human_review_flag_rate,110,13170,,,,False,,False,False,INSUFFICIENT_DATA
+race,Asian,Caucasian,true_positive_rate,11,1188,,,,False,,False,False,INSUFFICIENT_DATA
+race,Asian,Caucasian,false_positive_rate,99,11982,,,,False,,False,False,INSUFFICIENT_DATA
+race,Hispanic,Caucasian,human_review_flag_rate,372,13170,,,,False,,False,False,INSUFFICIENT_DATA
+race,Hispanic,Caucasian,true_positive_rate,33,1188,,,,False,,False,False,INSUFFICIENT_DATA
+race,Hispanic,Caucasian,false_positive_rate,339,11982,,,,False,,False,False,INSUFFICIENT_DATA
+race,Other,Caucasian,human_review_flag_rate,286,13170,,,,False,,False,False,INSUFFICIENT_DATA
+race,Other,Caucasian,true_positive_rate,20,1188,,,,False,,False,False,INSUFFICIENT_DATA
+race,Other,Caucasian,false_positive_rate,266,11982,,,,False,,False,False,INSUFFICIENT_DATA
+race,Unknown/Not recorded,Caucasian,human_review_flag_rate,491,13170,,,,False,,False,False,INSUFFICIENT_DATA
+race,Unknown/Not recorded,Caucasian,true_positive_rate,40,1188,,,,False,,False,False,INSUFFICIENT_DATA
+race,Unknown/Not recorded,Caucasian,false_positive_rate,451,11982,,,,False,,False,False,INSUFFICIENT_DATA
