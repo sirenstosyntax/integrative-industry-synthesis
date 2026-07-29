@@ -1,3 +1,3 @@
 validation_scenario,simulations,target_difference,mean_realized_difference,trigger_rate,interpretation
 independent_null_group,200,0.0,0.0,0.0,Estimated familywise false-positive rate across three independent audit fields and three metrics per field.
-injected_flag_rate_disparity,200,0.15,0.15052631637433816,1.0,Estimated detection rate for a known disparity.
+injected_flag_rate_disparity,200,0.15,0.15005166226265815,1.0,Estimated detection rate for a known disparity.
